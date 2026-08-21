@@ -115,17 +115,30 @@ def _validate_filters(filters: object) -> list[dict]:
 	return validated
 
 
-def interpret_search_turn(user_message: str, state: dict | None = None) -> dict:
+def interpret_search_turn(
+	user_message: str,
+	state: dict | None = None,
+	*,
+	contractvorm: str | None = None,
+) -> dict:
 	"""Interpret one message and choose one unresolved label to ask about."""
 	state = state or {}
+	contractvorm = contractvorm or state.get("contractvorm")
+	conversation_fields = {
+		field: field_type
+		for field, field_type in SEARCHABLE_FIELDS.items()
+		if not (contractvorm == "lease" and field == "aanschafprijs")
+	}
 	known_filters = _validate_filters(state.get("filters", []))
+	if contractvorm == "lease":
+		known_filters = [item for item in known_filters if item["field"] != "aanschafprijs"]
 	answered_fields = {
-		field for field in state.get("answered_fields", []) if field in SEARCHABLE_FIELDS
+		field for field in state.get("answered_fields", []) if field in conversation_fields
 	}
 	answered_fields.update(item["field"] for item in known_filters)
 	previous_question = state.get("follow_up")
 	field_description = ", ".join(
-		f"{name} ({field_type})" for name, field_type in SEARCHABLE_FIELDS.items()
+		f"{name} ({field_type})" for name, field_type in conversation_fields.items()
 	)
 	allowed_value_description = json.dumps(ALLOWED_FIELD_VALUES, ensure_ascii=False)
 
@@ -170,6 +183,8 @@ toegestane waarden. Retourneer nooit een andere tekstwaarde. Voor numerieke
 velden mag je wel iedere concrete grenswaarde gebruiken.
 
 Beschikbare veldlabels: {field_description}
+Contractvorm: {contractvorm or "onbekend"}. Bij lease is het maandbudget al buiten
+dit gesprek vastgelegd; vraag dan nooit naar aanschafprijs of een aankoopbudget.
 Toegestane waarden per categorisch veld: {allowed_value_description}
 Al beantwoorde veldlabels: {json.dumps(sorted(answered_fields), ensure_ascii=False)}
 Bestaande filters: {json.dumps(known_filters, ensure_ascii=False)}
@@ -183,12 +198,15 @@ Nieuwste bericht: {json.dumps(user_message, ensure_ascii=False)}
 	except json.JSONDecodeError as error:
 		raise ValueError("Gemini returned invalid search-state JSON") from error
 
-	filter_updates = _validate_filters(result.get("set_filters", []))
+	filter_updates = [
+		item for item in _validate_filters(result.get("set_filters", []))
+		if item["field"] in conversation_fields
+	]
 	remove_filters = result.get("remove_filters", [])
 	if not isinstance(remove_filters, list):
 		remove_filters = []
 	remove_fields = {
-		field for field in remove_filters if field in SEARCHABLE_FIELDS
+		field for field in remove_filters if field in conversation_fields
 	}
 	filters_by_field = {item["field"]: item for item in known_filters}
 	for field in remove_fields:
@@ -200,11 +218,11 @@ Nieuwste bericht: {json.dumps(user_message, ensure_ascii=False)}
 	no_preference_fields = result.get("no_preference_fields", [])
 	if isinstance(no_preference_fields, list):
 		answered_fields.update(
-			field for field in no_preference_fields if field in SEARCHABLE_FIELDS
+			field for field in no_preference_fields if field in conversation_fields
 		)
 	answered_fields.update(item["field"] for item in filter_updates)
 
-	missing_fields = [field for field in SEARCHABLE_FIELDS if field not in answered_fields]
+	missing_fields = [field for field in conversation_fields if field not in answered_fields]
 	follow_up_field = result.get("follow_up_field")
 	if not missing_fields:
 		follow_up = None
