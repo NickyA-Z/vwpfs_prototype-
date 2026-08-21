@@ -73,6 +73,7 @@ export default function CarViewer({ spec }: { spec: RenderSpec }) {
       renderer.setSize(w, h)
       camera.aspect = w / h
       camera.updateProjectionMatrix()
+      renderer.render(scene, camera)
     }
     resize()
     const observer = new ResizeObserver(resize)

@@ -61,11 +61,18 @@ export async function rankCars(
   excludeIds: string[],
   limit = 4,
   contractvorm: Contractvorm = 'koop',
+  maxMaandbedrag: number | null = null,
 ): Promise<Car[]> {
   const res = await fetch('/api/rank', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filters, exclude_ids: excludeIds, contractvorm, limit }),
+    body: JSON.stringify({
+      filters,
+      exclude_ids: excludeIds,
+      contractvorm,
+      limit,
+      max_maandbedrag: maxMaandbedrag,
+    }),
   })
   if (!res.ok) throw new Error(`rank failed: ${res.status}`)
   const data = await res.json()
@@ -113,12 +120,6 @@ const GEARBOX: Record<string, string> = {
   Manual: 'Handgeschakeld',
   Automatic: 'Automaat',
 }
-const BUDGET_MAX: Record<string, number> = {
-  'Under €15k': 15000,
-  '€15–30k': 30000,
-  '€30–50k': 50000,
-  '€50k+': 120000,
-}
 const BRAND_GROUPS: Record<string, string[]> = {
   German: ['Volkswagen', 'Audi', 'BMW', 'Mercedes-Benz', 'Opel', 'Porsche'],
   Japanese: ['Toyota', 'Nissan'],
@@ -140,7 +141,13 @@ export function answersToFilters(answers: Record<string, string>): SearchFilter[
   if (answers.seats === '7+') add({ field: 'zitplaatsen', operator: 'min', value: 7, importance: 'required' })
   if (FUEL[answers.fuel]) add({ field: 'brandstof', operator: 'eq', value: FUEL[answers.fuel], importance: 'required' })
   if (GEARBOX[answers.gearbox]) add({ field: 'transmissie', operator: 'eq', value: GEARBOX[answers.gearbox], importance: 'required' })
-  if (BUDGET_MAX[answers.budget]) add({ field: 'aanschafprijs', operator: 'max', value: BUDGET_MAX[answers.budget], importance: 'required' })
+  // a lease budget caps the monthly amount instead (rankCars' maxMaandbedrag)
+  if (answers.contract !== 'Lease' && Number(answers.budget) > 0) {
+    add({ field: 'aanschafprijs', operator: 'max', value: Number(answers.budget), importance: 'required' })
+  }
+  if (Number(answers.mileage) > 0) {
+    add({ field: 'kilometerstand', operator: 'max', value: Number(answers.mileage), importance: 'required' })
+  }
   for (const merk of BRAND_GROUPS[answers.brand] ?? []) {
     add({ field: 'merk', operator: 'eq', value: merk, importance: 'preferred' })
   }
