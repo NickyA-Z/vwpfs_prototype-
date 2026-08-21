@@ -61,11 +61,15 @@ export async function rankCars(
   excludeIds: string[],
   limit = 4,
   contractvorm: Contractvorm = 'koop',
+  maxMaandbedrag?: number,
 ): Promise<Car[]> {
   const res = await fetch('/api/rank', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filters, exclude_ids: excludeIds, contractvorm, limit }),
+    body: JSON.stringify({
+      filters, exclude_ids: excludeIds, contractvorm, limit,
+      max_maandbedrag: maxMaandbedrag,
+    }),
   })
   if (!res.ok) throw new Error(`rank failed: ${res.status}`)
   const data = await res.json()
@@ -78,6 +82,7 @@ export async function chatTurn(
   message: string,
   state: ChatState | null,
   contractvorm: Contractvorm = 'koop',
+  maxMaandbedrag?: number,
 ): Promise<{
   state: ChatState
   filters: SearchFilter[]
@@ -88,7 +93,7 @@ export async function chatTurn(
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, state, contractvorm }),
+    body: JSON.stringify({ message, state, contractvorm, max_maandbedrag: maxMaandbedrag }),
   })
   if (!res.ok) throw new Error(`chat failed: ${res.status}`)
   return res.json()

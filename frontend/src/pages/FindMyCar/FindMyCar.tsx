@@ -9,6 +9,7 @@ import CarViewer from '../../components/CarViewer'
 
 type Phase = 'intro' | 'flow' | 'done'
 type Answers = Record<string, string>
+const MIN_LEASE_BUDGET = 173
 
 const RAIL_FALLBACK = {
   body: 'Sedan, SUV, Hatchback…',
@@ -90,6 +91,9 @@ function euro(value: string | number | null | undefined): string {
 export default function FindMyCar() {
   const [phase, setPhase] = useState<Phase>('intro')
   const [contractvorm, setContractvorm] = useState<Contractvorm | null>(null)
+  const [maxMaandbedrag, setMaxMaandbedrag] = useState<number | undefined>()
+  const [leaseBudgetDraft, setLeaseBudgetDraft] = useState('')
+  const [leaseBudgetError, setLeaseBudgetError] = useState(false)
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [draft, setDraft] = useState('')
@@ -111,7 +115,11 @@ export default function FindMyCar() {
   const [searchError, setSearchError] = useState(false)
   const rankSeq = useRef(0)
 
-  const question = QUESTIONS[Math.min(step, QUESTIONS.length - 1)]
+  const activeQuestions = useMemo(
+    () => contractvorm === 'lease' ? QUESTIONS.filter((item) => item.id !== 'budget') : QUESTIONS,
+    [contractvorm],
+  )
+  const question = activeQuestions[Math.min(step, activeQuestions.length - 1)]
   const isIntro = phase === 'intro'
   const isFlow = phase === 'flow'
   const isDone = phase === 'done'
@@ -126,7 +134,7 @@ export default function FindMyCar() {
     if (!isDone) return
     const seq = ++rankSeq.current
     setSearching(true)
-    rankCars(filters, rejected, 4, contractvorm ?? 'koop')
+    rankCars(filters, rejected, 4, contractvorm ?? 'koop', maxMaandbedrag)
       .then((found) => {
         if (rankSeq.current !== seq) return
         setCars(found)
@@ -139,13 +147,15 @@ export default function FindMyCar() {
       .finally(() => {
         if (rankSeq.current === seq) setSearching(false)
       })
-  }, [isDone, filters, rejected, contractvorm])
+  }, [isDone, filters, rejected, contractvorm, maxMaandbedrag])
 
   async function sendToAi(message: string): Promise<boolean> {
     if (!message.trim() || chatBusy) return false
     setChatBusy(true)
     try {
-      const result = await chatTurn(message.trim(), chatState, contractvorm ?? 'koop')
+      const result = await chatTurn(
+        message.trim(), chatState, contractvorm ?? 'koop', maxMaandbedrag,
+      )
       setChatState(result.state)
       setAiFilters(result.state.filters)
       setAiQuestion(result.follow_up?.question ?? null)
@@ -164,7 +174,7 @@ export default function FindMyCar() {
     const nextStep = step + 1
     setAnswers(nextAnswers)
     setStep(nextStep)
-    if (nextStep >= QUESTIONS.length) {
+    if (nextStep >= activeQuestions.length) {
       setPhase('done')
       // best effort: let the backend AI classify the free-text brief too
       if (brief) void sendToAi(brief)
@@ -186,6 +196,16 @@ export default function FindMyCar() {
     if (!online) setPhase('flow')
   }
 
+  function saveLeaseBudget() {
+    const value = Number(leaseBudgetDraft.replace('€', '').replaceAll(' ', '').replace(',', '.'))
+    if (Number.isFinite(value) && value >= MIN_LEASE_BUDGET) {
+      setLeaseBudgetError(false)
+      setMaxMaandbedrag(value)
+    } else {
+      setLeaseBudgetError(true)
+    }
+  }
+
   function back() {
     if (step === 0) {
       setPhase('intro')
@@ -202,6 +222,9 @@ export default function FindMyCar() {
   function reset() {
     setPhase('intro')
     setContractvorm(null)
+    setMaxMaandbedrag(undefined)
+    setLeaseBudgetDraft('')
+    setLeaseBudgetError(false)
     setStep(0)
     setAnswers({})
     setDraft('')
@@ -244,11 +267,14 @@ export default function FindMyCar() {
 
   const current = cars[0]
   const alternatives = cars.slice(1)
+  const needsLeaseBudget = isIntro && contractvorm === 'lease' && maxMaandbedrag === undefined
 
-  const bubbleKicker = isIntro ? 'Your car advisor' : isDone ? 'Your match' : question.kicker
+  const bubbleKicker = isIntro ? 'Your car advisor' : isDone ? 'Your match' : `Question ${step + 1} of ${activeQuestions.length}`
   const bubbleTitle = isIntro
     ? contractvorm
-      ? contractvorm === 'koop' ? 'Welke auto wil je kopen?' : 'Welke auto wil je leasen?'
+      ? needsLeaseBudget
+        ? 'Wat is je maximale maandbudget?'
+        : contractvorm === 'koop' ? 'Welke auto wil je kopen?' : 'Welke auto wil je leasen?'
       : 'Wil je kopen of leasen?'
     : isDone
       ? searching && !current
@@ -259,7 +285,11 @@ export default function FindMyCar() {
       : question.title
   const bubbleBody = isIntro
     ? contractvorm
-      ? "Beschrijf wat voor auto je zoekt. Ik interpreteer je wensen en stel steeds één korte vervolgvraag."
+      ? needsLeaseBudget
+        ? leaseBudgetError
+          ? `Vul minimaal €${MIN_LEASE_BUDGET} per maand in; dat is de laagste leaseprijs in de huidige voorraad.`
+          : `Vul je maximale maandbedrag in, vanaf €${MIN_LEASE_BUDGET}. De leaseprijs wordt berekend voor 48 maanden en 15.000 km per jaar.`
+        : "Beschrijf wat voor auto je zoekt. Ik interpreteer je wensen en stel steeds één korte vervolgvraag."
       : 'Deze keuze bepaalt of ik op aanschafprijs of maandelijkse leaseprijs zoek.'
     : isDone
       ? aiQuestion
@@ -271,8 +301,8 @@ export default function FindMyCar() {
             : 'Er zijn geen auto’s meer beschikbaar. Reset de zoekopdracht om opnieuw te beginnen.'
       : question.body
 
-  const progressLabel = `Question ${step + 1} of ${QUESTIONS.length}`
-  const progressWidth = `${(step / QUESTIONS.length) * 100}%`
+  const progressLabel = `Question ${step + 1} of ${activeQuestions.length}`
+  const progressWidth = `${(step / activeQuestions.length) * 100}%`
 
   const specs = current
     ? [
@@ -344,7 +374,31 @@ export default function FindMyCar() {
             {isDone && (
               <>
                 <span className="fmc-filter-heading">Your criteria</span>
-                {filters.length === 0 && <span className="fmc-filter-empty">No criteria — showing everything.</span>}
+                {contractvorm === 'lease' && maxMaandbedrag !== undefined && (
+                  <>
+                    <div className="fmc-filter-card">
+                      <span className="fmc-rail-text">
+                        <span className="fmc-rail-title">Maximaal maandbedrag</span>
+                        <span className="fmc-rail-value filled">{euro(maxMaandbedrag)} / maand</span>
+                      </span>
+                    </div>
+                    <div className="fmc-filter-card preferred">
+                      <span className="fmc-rail-text">
+                        <span className="fmc-rail-title">Looptijd</span>
+                        <span className="fmc-rail-value filled">48 maanden</span>
+                      </span>
+                    </div>
+                    <div className="fmc-filter-card preferred">
+                      <span className="fmc-rail-text">
+                        <span className="fmc-rail-title">Kilometers per jaar</span>
+                        <span className="fmc-rail-value filled">15.000 km</span>
+                      </span>
+                    </div>
+                  </>
+                )}
+                {filters.length === 0 && contractvorm !== 'lease' && (
+                  <span className="fmc-filter-empty">No criteria — showing everything.</span>
+                )}
                 {filters.map((f) => {
                   const key = filterKey(f)
                   const { label, value } = describeFilter(f)
@@ -466,7 +520,33 @@ export default function FindMyCar() {
 
         <footer className="fmc-footer">
           <div className="fmc-footer-inner">
-            {isIntro && contractvorm && (
+            {needsLeaseBudget && (
+              <div className="fmc-intro-row">
+                <span className="fmc-intro-col">
+                  <input
+                    className="fmc-input"
+                    value={leaseBudgetDraft}
+                    onChange={(e) => {
+                      setLeaseBudgetDraft(e.target.value)
+                      setLeaseBudgetError(false)
+                    }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveLeaseBudget() }}
+                    placeholder={`Minimaal €${MIN_LEASE_BUDGET}·`}
+                    inputMode="decimal"
+                    min={MIN_LEASE_BUDGET}
+                    autoFocus
+                  />
+                </span>
+                <button type="button" className="fmc-submit-btn" onClick={saveLeaseBudget} aria-label="Bevestig maandbudget">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 19V5" />
+                    <path d="M6 11l6-6 6 6" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {isIntro && contractvorm && !needsLeaseBudget && (
               <div className="fmc-intro-row">
                 <span className="fmc-intro-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
