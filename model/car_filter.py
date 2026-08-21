@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+import unicodedata
 
 from advanced.lease_pricing import (
 	KM_PER_JAAR_OPTIES,
@@ -59,6 +60,86 @@ SEARCHABLE_FIELDS = {
 }
 
 ALLOWED_OPERATORS = {"eq", "contains", "min", "max"}
+OPERATORS_BY_TYPE = {
+    "number": {"eq", "min", "max"},
+    "text": {"eq", "contains"},
+    "boolean": {"eq"},
+}
+
+
+def _load_allowed_values(cars_path: Path = DEFAULT_CARS_PATH) -> dict[str, list]:
+	"""Load every distinct categorical value directly from the inventory."""
+	with cars_path.open(encoding="utf-8", newline="") as csv_file:
+		rows = list(csv.DictReader(csv_file))
+
+	allowed_values = {}
+	for field, field_type in SEARCHABLE_FIELDS.items():
+		if field_type == "text":
+			allowed_values[field] = sorted(
+				{row[field] for row in rows if row.get(field)}
+			)
+		elif field_type == "boolean":
+			allowed_values[field] = [False, True]
+	return allowed_values
+
+
+ALLOWED_FIELD_VALUES = _load_allowed_values()
+
+VALUE_ALIASES = {
+	"type": {"occasion": "Tweedehands", "gebruikt": "Tweedehands"},
+	"transmissie": {
+		"automatisch": "Automaat",
+		"handbak": "Handgeschakeld",
+		"schakel": "Handgeschakeld",
+	},
+	"brandstof": {
+		"ev": "Elektrisch",
+		"elektrische auto": "Elektrisch",
+		"plug in hybride": "PHEV",
+	},
+	"carrosserie": {
+		"station": "Stationwagon",
+		"combi": "Stationwagon",
+		"crossover": "SUV",
+	},
+	"conditie": {"zo goed als nieuw": "Nieuwstaat", "zgan": "Nieuwstaat"},
+	"merk": {"skoda": "Škoda", "citroen": "Citroën", "mercedes": "Mercedes-Benz"},
+}
+
+
+def _normalized_text(value: object) -> str:
+	text = unicodedata.normalize("NFKD", str(value).casefold())
+	return " ".join(
+		"".join(character if character.isalnum() else " " for character in text).split()
+	)
+
+
+def normalize_filter_value(field: str, value: object) -> object | None:
+	"""Convert user/LLM variants to an exact value supported by the CSV."""
+	field_type = SEARCHABLE_FIELDS[field]
+	if field_type == "number":
+		try:
+			return float(value)
+		except (TypeError, ValueError):
+			return None
+	if field_type == "boolean":
+		if isinstance(value, bool):
+			return value
+		normalized = _normalized_text(value)
+		if normalized in {"true", "1", "ja", "yes", "aan", "gewenst"}:
+			return True
+		if normalized in {"false", "0", "nee", "no", "uit", "ongewenst"}:
+			return False
+		return None
+
+	normalized = _normalized_text(value)
+	for alias, exact_value in VALUE_ALIASES.get(field, {}).items():
+		if _normalized_text(alias) == normalized:
+			return exact_value
+	for allowed_value in ALLOWED_FIELD_VALUES[field]:
+		if _normalized_text(allowed_value) == normalized:
+			return allowed_value
+	return None
 
 
 def matches_filter(row: dict, search_filter: dict) -> bool:

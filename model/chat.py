@@ -37,6 +37,8 @@ def print_filters(filters: list[dict]) -> None:
 		value = search_filter["value"]
 		if isinstance(value, bool):
 			value = "ja" if value else "nee"
+		elif search_filter.get("source") == "aankoopbudget":
+			value = f"€{float(value):,.0f}"
 		print(
 			f"- {search_filter['field']} {operator} {value} "
 			f"({importance})"
@@ -127,14 +129,33 @@ def _ask_monthly_budget() -> float:
 		answer = input("Assistent: Wat is je maximale maandbudget in euro's?\nJij: ").strip()
 		if answer.casefold() in EXIT_COMMANDS:
 			raise SystemExit("Gesprek afgesloten.")
-		normalized = answer.replace("€", "").replace(" ", "").replace(",", ".")
-		try:
-			budget = float(normalized)
-		except ValueError:
-			budget = 0
+		budget = _parse_euro_amount(answer)
 		if budget > 0:
 			return budget
 		print("Vul een positief bedrag in, bijvoorbeeld 500.\n")
+
+
+def _parse_euro_amount(answer: str) -> float:
+	"""Parse common Dutch money notation, including 30k and €30.000,-."""
+	normalized = (
+		answer.casefold()
+		.replace("€", "")
+		.replace("euro", "")
+		.replace(" ", "")
+		.removesuffix(",-" )
+		.removesuffix(".-")
+	)
+	multiplier = 1_000 if normalized.endswith("k") else 1
+	if multiplier == 1_000:
+		normalized = normalized[:-1].replace(",", ".")
+	elif "," in normalized:
+		normalized = normalized.replace(".", "").replace(",", ".")
+	elif normalized.count(".") == 1 and len(normalized.rsplit(".", 1)[1]) == 3:
+		normalized = normalized.replace(".", "")
+	try:
+		return float(normalized) * multiplier
+	except ValueError:
+		return 0
 
 
 def _ask_purchase_budget() -> float:
@@ -143,15 +164,7 @@ def _ask_purchase_budget() -> float:
 		answer = input("Assistent: Wat is je maximale aankoopbudget in euro's?\nJij: ").strip()
 		if answer.casefold() in EXIT_COMMANDS:
 			raise SystemExit("Gesprek afgesloten.")
-		normalized = answer.replace("€", "").replace(" ", "")
-		if "," in normalized:
-			normalized = normalized.replace(".", "").replace(",", ".")
-		else:
-			normalized = normalized.replace(".", "")
-		try:
-			budget = float(normalized)
-		except ValueError:
-			budget = 0
+		budget = _parse_euro_amount(answer)
 		if budget > 0:
 			return budget
 		print("Vul een positief bedrag in, bijvoorbeeld 30000.\n")
@@ -210,7 +223,7 @@ def main() -> None:
 			continue
 
 		state = result["state"]
-		print_filters(state["filters"])
+		print_filters(result["filters"])
 		print_cars(result["cars"])
 
 		if result["complete"]:
