@@ -38,8 +38,9 @@ export default function CarViewer({ spec }: { spec: RenderSpec }) {
     // soft, flat, toy-like light rather than a reflective showroom
     scene.environmentIntensity = 0.5
 
-    const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100)
-    camera.position.set(4.6, 1.9, 5.4)
+    // far enough back that a full-size wagon fits the frame with margin
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
+    camera.position.set(5.4, 2.1, 6.4)
 
     const key = new THREE.DirectionalLight(0xfff4e0, 0.9)
     key.position.set(4, 6, 3)
