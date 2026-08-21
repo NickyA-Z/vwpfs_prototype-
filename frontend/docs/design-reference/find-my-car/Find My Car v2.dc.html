@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<script src="./image-slot.js"></script>
+<style>
+html, body { margin: 0; height: 100%; background: #0d0d0f; }
+* { box-sizing: border-box; }
+a { color: #1c1e21; }
+a:hover { color: #55585e; }
+input::placeholder { color: rgba(28,30,33,.42); }
+</style>
+</helmet>
+
+<div style="height: 100vh; min-height: 440px; padding: 14px; background: #0d0d0f; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #1c1e21;">
+<div style="position: relative; height: 100%; border-radius: 30px; overflow: hidden; background: linear-gradient(180deg, #f4f4f5 0%, #e8e8ea 46%, #f7f7f8 100%); display: flex; flex-direction: column;">
+
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 60% at 18% 34%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%), radial-gradient(80% 55% at 84% 38%, rgba(255,255,255,.82), rgba(255,255,255,0) 70%), linear-gradient(180deg, #eff0f2 0%, #e4e5e9 52%, #f6f6f7 100%);"></div>
+  <div style="position: absolute; left: 50%; bottom: -160px; transform: translateX(-50%); width: 120%; height: 420px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,255,255,0));"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 8%, rgba(255,255,255,.72) 0%, rgba(255,255,255,.28) 42%, rgba(255,255,255,0) 72%); pointer-events: none;"></div>
+
+  <header style="position: relative; flex: none; display: flex; align-items: center; gap: 12px; padding: 20px 26px;">
+    <span style="display: flex; align-items: center; gap: 11px; font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin-right: auto;">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2v-4l-2-5H5L3 13v4h2"></path><path d="M5 17h14"></path><circle cx="7.5" cy="17" r="2"></circle><circle cx="16.5" cy="17" r="2"></circle></svg>
+      Find My Car
+    </span>
+    <span style="display: inline-flex; align-items: center; gap: 9px; padding: 10px 18px; border-radius: 999px; background: rgba(255,255,255,.78); backdrop-filter: blur(14px); box-shadow: 0 2px 10px rgba(20,22,26,.08); font-size: 14.5px; font-weight: 600;">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: #34c759; box-shadow: 0 0 0 3px rgba(52,199,89,.18);"></span>{{ statusLabel }}
+    </span>
+    <button onClick="{{ reset }}" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 0; border-radius: 999px; background: rgba(255,255,255,.62); backdrop-filter: blur(14px); box-shadow: 0 2px 10px rgba(20,22,26,.07); font: inherit; font-size: 14px; font-weight: 600; color: #55585e; cursor: pointer;" style-hover="background: rgba(255,255,255,.9); color: #1c1e21;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path></svg>
+      Reset
+    </button>
+    <button style="display: grid; place-items: center; width: 42px; height: 42px; border: 0; border-radius: 14px; background: transparent; color: #1c1e21; cursor: pointer;" style-hover="background: rgba(255,255,255,.6);">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </button>
+  </header>
+
+  <main style="position: relative; flex: 1; min-height: 0; display: flex; flex-wrap: nowrap; align-items: stretch; gap: 20px; padding: 0 26px;">
+
+    <sc-if value="{{ railVisible }}" hint-placeholder-val="{{ true }}">
+    <section style="flex: 1 1 214px; min-width: 196px; max-width: 258px; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px 2px 2px;">
+
+      <div style="display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; padding: 7px 12px; border-radius: 16px; background: rgba(255,255,255,.7); backdrop-filter: blur(16px); box-shadow: 0 4px 16px rgba(20,22,26,.07);">
+        <span style="display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; background: rgba(28,30,33,.055);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity: .8;"><path d="M19 17h2v-4l-2-5H5L3 13v4h2"></path><path d="M5 17h14"></path><circle cx="7.5" cy="17" r="2"></circle><circle cx="16.5" cy="17" r="2"></circle></svg>
+        </span>
+        <span style="min-width: 0;">
+          <span style="display: block; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em;">Body type</span>
+          <span style="display: block; font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{ railBodyTone }};">{{ railBody }}</span>
+        </span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; padding: 7px 12px; border-radius: 16px; background: rgba(255,255,255,.7); backdrop-filter: blur(16px); box-shadow: 0 4px 16px rgba(20,22,26,.07);">
+        <span style="display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; background: rgba(28,30,33,.055);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity: .8;"><path d="M12 2v20"></path><path d="M16 6.5C16 5 14.2 4 12 4S8 5 8 6.8 9.6 9.4 12 10s4 1.6 4 3.4S14.2 16 12 16s-4-1-4-2.5"></path></svg>
+        </span>
+        <span style="min-width: 0;">
+          <span style="display: block; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em;">Budget</span>
+          <span style="display: block; font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{ railBudgetTone }};">{{ railBudget }}</span>
+        </span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; padding: 7px 12px; border-radius: 16px; background: rgba(255,255,255,.7); backdrop-filter: blur(16px); box-shadow: 0 4px 16px rgba(20,22,26,.07);">
+        <span style="display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; background: rgba(28,30,33,.055);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity: .8;"><path d="M3 22V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v18"></path><path d="M3 12h10"></path><path d="M16 8h3l2 3v8a2 2 0 0 1-4 0v-5h-1"></path></svg>
+        </span>
+        <span style="min-width: 0;">
+          <span style="display: block; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em;">Fuel type</span>
+          <span style="display: block; font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{ railFuelTone }};">{{ railFuel }}</span>
+        </span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; padding: 7px 12px; border-radius: 16px; background: rgba(255,255,255,.7); backdrop-filter: blur(16px); box-shadow: 0 4px 16px rgba(20,22,26,.07);">
+        <span style="display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; background: rgba(28,30,33,.055);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity: .8;"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"></path></svg>
+        </span>
+        <span style="min-width: 0;">
+          <span style="display: block; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em;">Features</span>
+          <span style="display: block; font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{ railFeaturesTone }};">{{ railFeatures }}</span>
+        </span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; padding: 7px 12px; border-radius: 16px; background: rgba(255,255,255,.7); backdrop-filter: blur(16px); box-shadow: 0 4px 16px rgba(20,22,26,.07);">
+        <span style="display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; background: rgba(28,30,33,.055);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity: .8;"><path d="M12 3l7 3v5.5c0 4.3-2.9 7.9-7 9.5-4.1-1.6-7-5.2-7-9.5V6z"></path></svg>
+        </span>
+        <span style="min-width: 0;">
+          <span style="display: block; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em;">Brand</span>
+          <span style="display: block; font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{ railBrandTone }};">{{ railBrand }}</span>
+        </span>
+      </div>
+    </section>
+    </sc-if>
+
+    <section style="flex: 2 1 200px; min-width: 150px; min-height: 0; position: relative; display: grid; place-items: end center;">
+      <div style="position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); min-width: 0; width: min(560px, 100%); height: min(78%, 420px); border-radius: 220px 220px 26px 26px; background: linear-gradient(180deg, rgba(197,203,214,.55) 0%, rgba(206,211,220,.32) 100%);"></div>
+      <div style="position: relative; min-width: 0; width: min(340px, 100%); height: min(94%, 440px);">
+        <image-slot id="mascot2" shape="rect" fit="contain" placeholder="Drop mascot"></image-slot>
+      </div>
+    </section>
+
+    <section style="flex: 2 1 300px; min-width: 262px; max-width: 400px; min-height: 0; display: flex; flex-direction: column; gap: 11px; padding: 6px 2px 8px; overflow-y: auto;">
+      <div style="position: relative; padding: 22px 26px 24px; border-radius: 26px; background: rgba(255,255,255,.9); backdrop-filter: blur(18px); box-shadow: 0 10px 34px rgba(20,22,26,.11);">
+        <span style="display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(28,30,33,.4); margin-bottom: 8px;">{{ bubbleKicker }}</span>
+        <span style="display: block; font-size: clamp(26px, 3.1vw, 36px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; margin-bottom: 10px;">{{ bubbleTitle }}</span>
+        <span style="display: block; font-size: 15.5px; line-height: 1.5; color: rgba(28,30,33,.66);">{{ bubbleBody }}</span>
+      </div>
+
+      <sc-if value="{{ hasOptions }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-wrap: wrap; gap: 9px;">
+        <sc-for list="{{ options }}" as="opt" hint-placeholder-count="0">
+          <button onClick="{{ opt.onClick }}" style="padding: 12px 20px; border: 0; border-radius: 999px; background: rgba(255,255,255,.88); backdrop-filter: blur(14px); box-shadow: 0 3px 12px rgba(20,22,26,.09); font: inherit; font-size: 15px; font-weight: 600; color: #1c1e21; cursor: pointer; transition: transform .16s ease, box-shadow .16s ease;" style-hover="transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,22,26,.15);" style-active="transform: translateY(0);">{{ opt.label }}</button>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 9px;">
+        <sc-for list="{{ matches }}" as="m" hint-placeholder-count="0">
+          <div style="display: flex; flex-direction: column; gap: 3px; padding: 14px 18px; border-radius: 20px; background: rgba(255,255,255,.85); backdrop-filter: blur(14px); box-shadow: 0 4px 16px rgba(20,22,26,.08);">
+            <span style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+              <span style="font-size: 16px; font-weight: 700; letter-spacing: -0.015em;">{{ m.name }}</span>
+              <span style="font-size: 15px; font-weight: 700; color: #55585e;">{{ m.price }}</span>
+            </span>
+            <span style="font-size: 12.5px; color: rgba(28,30,33,.5);">{{ m.spec }}</span>
+          </div>
+        </sc-for>
+        <button style="align-self: flex-start; padding: 13px 22px; border: 0; border-radius: 999px; background: #1c1e21; color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="background: #34383e;">See all matches</button>
+      </div>
+      </sc-if>
+    </section>
+  </main>
+
+  <footer style="position: relative; flex: none; display: flex; justify-content: center; padding: 16px 26px 22px;">
+    <div style="width: 100%; max-width: 1020px; display: flex; flex-direction: column; gap: 9px;">
+
+      <sc-if value="{{ isIntro }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 28px; background: rgba(255,255,255,.82); backdrop-filter: blur(20px); box-shadow: 0 12px 38px rgba(20,22,26,.14);">
+        <span style="display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 15px; background: rgba(28,30,33,.055);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18 16.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"></path></svg>
+        </span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px;">
+          <input value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" placeholder="Describe the car you're looking for…" style="width: 100%; border: 0; outline: none; background: transparent; font: inherit; font-size: 17px; font-weight: 500; color: #1c1e21; padding: 0;">
+          <span style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <sc-for list="{{ examples }}" as="ex" hint-placeholder-count="3">
+              <button onClick="{{ ex.onClick }}" style="padding: 8px 15px; border: 0; border-radius: 999px; background: rgba(28,30,33,.055); font: inherit; font-size: 13.5px; font-weight: 500; color: rgba(28,30,33,.55); cursor: pointer;" style-hover="background: rgba(28,30,33,.1); color: #1c1e21;">{{ ex.label }}</button>
+            </sc-for>
+          </span>
+        </span>
+        <button onClick="{{ submit }}" style="display: grid; place-items: center; width: 52px; height: 52px; flex: none; border: 0; border-radius: 50%; background: #1c1e21; color: #fff; cursor: pointer;" style-hover="background: #34383e;">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg>
+        </button>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isFlow }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; border-radius: 999px; background: rgba(255,255,255,.72); backdrop-filter: blur(18px); box-shadow: 0 8px 26px rgba(20,22,26,.1);">
+        <span style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+          <span style="font-size: 13.5px; font-weight: 700;">{{ progressLabel }}</span>
+          <span style="width: 120px; height: 4px; border-radius: 999px; background: rgba(28,30,33,.1); overflow: hidden;">
+            <span style="display: block; height: 4px; border-radius: 999px; background: #1c1e21; width: {{ progressWidth }};"></span>
+          </span>
+        </span>
+        <span style="display: flex; gap: 8px;">
+          <button onClick="{{ back }}" style="display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border: 0; border-radius: 999px; background: rgba(28,30,33,.055); font: inherit; font-size: 13.5px; font-weight: 600; color: #1c1e21; cursor: pointer;" style-hover="background: rgba(28,30,33,.1);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M11 18l-6-6 6-6"></path></svg>
+            Back
+          </button>
+          <button onClick="{{ skip }}" style="padding: 9px 14px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 13.5px; font-weight: 600; color: rgba(28,30,33,.5); cursor: pointer;" style-hover="color: #1c1e21;">Skip</button>
+        </span>
+      </div>
+      </sc-if>
+    </div>
+  </footer>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;statusLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Online&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;railVisible&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const QUESTIONS = [
+  { id: "body", facet: "body", kicker: "Question 1 of 8", title: "What shape?", body: "Pick the body that fits your life — you can change it later.", options: ["Sedan", "SUV", "Hatchback", "Estate", "Coupé"] },
+  { id: "doors", facet: "body", kicker: "Question 2 of 8", title: "How many doors?", body: "Two for the look, four for the school run.", options: ["2", "4"] },
+  { id: "seats", facet: "body", kicker: "Question 3 of 8", title: "How many seats?", body: "Count the people you carry on a normal week.", options: ["2", "4–5", "6+"] },
+  { id: "fuel", facet: "fuel", kicker: "Question 4 of 8", title: "What should it run on?", body: "This moves the running cost more than anything else.", options: ["Petrol", "Diesel", "Hybrid", "Electric"] },
+  { id: "gearbox", facet: "fuel", kicker: "Question 5 of 8", title: "Manual or automatic?", body: "No wrong answer — automatics dominate the electric stock.", options: ["Manual", "Automatic"] },
+  { id: "budget", facet: "budget", kicker: "Question 6 of 8", title: "What's your range?", body: "All-in price, before I filter anything out.", options: ["Under €15k", "€15–30k", "€30–50k", "€50k+"] },
+  { id: "brand", facet: "brand", kicker: "Question 7 of 8", title: "Leaning toward a badge?", body: "Only if you care — otherwise I'll look everywhere.", options: ["No preference", "German", "Japanese", "Korean", "American"] },
+  { id: "priority", facet: "features", kicker: "Question 8 of 8", title: "What matters most?", body: "The tie-breaker when two cars are otherwise equal.", options: ["Tech", "Safety", "Comfort", "Running cost"] }
+];
+
+const EXAMPLES = ["family car", "sporty and fast", "electric SUV"];
+
+class Component extends DCLogic {
+  state = { phase: "intro", step: 0, answers: {}, draft: "", brief: "" };
+
+  pick(id, value) {
+    this.setState(s => {
+      const answers = { ...s.answers, [id]: value };
+      const step = s.step + 1;
+      return { answers, step, phase: step >= QUESTIONS.length ? "done" : "flow" };
+    });
+  }
+
+  start(text) {
+    const t = (text || "").trim();
+    if (!t) return;
+    this.setState({ brief: t, draft: t, phase: "flow", step: 0 });
+  }
+
+  facetText(facet, fallback) {
+    const vals = QUESTIONS.filter(q => q.facet === facet).map(q => this.state.answers[q.id]).filter(Boolean);
+    if (!vals.length) return { text: fallback, tone: "rgba(28,30,33,.45)" };
+    return { text: vals.join(" · "), tone: "#1c1e21" };
+  }
+
+  matches() {
+    const a = this.state.answers;
+    const body = a.body || "Sedan";
+    const price = { "Under €15k": ["€12,400", "€13,950", "€14,600"], "€15–30k": ["€18,900", "€24,500", "€28,750"], "€30–50k": ["€33,400", "€39,900", "€46,200"], "€50k+": ["€54,900", "€61,500", "€72,000"] }[a.budget || "€15–30k"];
+    return ["Mid-range " + body, "Well-kept " + body, "Low-mileage " + body].map((name, i) => ({
+      name,
+      price: price[i],
+      spec: [a.fuel || "Petrol", a.gearbox || "Automatic", (a.seats || "4–5") + " seats", (a.doors || "4") + " doors"].join("  ·  ")
+    }));
+  }
+
+  renderVals() {
+    const { phase, step } = this.state;
+    const q = QUESTIONS[Math.min(step, QUESTIONS.length - 1)];
+    const isFlow = phase === "flow";
+    const isDone = phase === "done";
+
+    const rails = {
+      body: this.facetText("body", "Sedan, SUV, Hatchback…"),
+      budget: this.facetText("budget", "What's your range?"),
+      fuel: this.facetText("fuel", "Petrol, Diesel, Electric…"),
+      features: this.facetText("features", "Tech, Safety, Comfort…"),
+      brand: this.facetText("brand", "Your preferred brands")
+    };
+
+    return {
+      statusLabel: this.props.statusLabel ?? "Online",
+      railVisible: this.props.railVisible ?? true,
+
+      railBody: rails.body.text, railBodyTone: rails.body.tone,
+      railBudget: rails.budget.text, railBudgetTone: rails.budget.tone,
+      railFuel: rails.fuel.text, railFuelTone: rails.fuel.tone,
+      railFeatures: rails.features.text, railFeaturesTone: rails.features.tone,
+      railBrand: rails.brand.text, railBrandTone: rails.brand.tone,
+
+      isIntro: phase === "intro",
+      isFlow,
+      isDone,
+      hasOptions: isFlow,
+
+      bubbleKicker: phase === "intro" ? "Your car advisor" : isDone ? "Result" : q.kicker,
+      bubbleTitle: phase === "intro" ? "Hey there!" : isDone ? "Three to drive." : q.title,
+      bubbleBody: phase === "intro"
+        ? "Tell me what kind of car you're looking for and I'll help you find it — after that it's all buttons."
+        : isDone
+          ? "Based on \u201C" + (this.state.brief || "your brief") + "\u201D and your eight answers, these fit best."
+          : q.body,
+
+      options: isFlow ? q.options.map(label => ({ label, onClick: () => this.pick(q.id, label) })) : [],
+      matches: isDone ? this.matches() : [],
+
+      progressLabel: "Question " + (step + 1) + " of " + QUESTIONS.length,
+      progressWidth: ((step / QUESTIONS.length) * 100) + "%",
+
+      draft: this.state.draft,
+      examples: EXAMPLES.map(label => ({ label: "e.g. " + label, onClick: () => this.start(label) })),
+      onDraft: e => this.setState({ draft: e.target.value }),
+      onKey: e => { if (e.key === "Enter") this.start(this.state.draft); },
+      submit: () => this.start(this.state.draft),
+      back: () => this.setState(s => (s.step === 0 ? { phase: "intro" } : { step: s.step - 1, phase: "flow" })),
+      skip: () => this.pick(QUESTIONS[Math.min(step, QUESTIONS.length - 1)].id, ""),
+      reset: () => this.setState({ phase: "intro", step: 0, answers: {}, draft: "", brief: "" })
+    };
+  }
+}
+
+</script>
+</body>
+</html>
