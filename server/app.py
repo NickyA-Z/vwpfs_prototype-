@@ -22,11 +22,19 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 from car_3d import MODELS, render_spec
 from car_3d.catalog import REPO_ROOT
-from model.car_filter import ALLOWED_OPERATORS, SEARCHABLE_FIELDS, filter_and_rank_cars
+from model.car_filter import (
+    OPERATORS_BY_TYPE,
+    SEARCHABLE_FIELDS,
+    filter_and_rank_cars,
+    normalize_filter_value,
+)
+
+load_dotenv()
 
 app = FastAPI(title="VWPFS car finder API")
 
@@ -83,10 +91,17 @@ class ChatRequest(BaseModel):
 def _validated(filters: list[SearchFilter]) -> list[dict]:
     out = []
     for f in filters:
-        if (f.field in SEARCHABLE_FIELDS and f.operator in ALLOWED_OPERATORS
-                and f.importance in {"required", "preferred"}):
+        value = (
+            normalize_filter_value(f.field, f.value)
+            if f.field in SEARCHABLE_FIELDS
+            else None
+        )
+        if (f.field in SEARCHABLE_FIELDS
+                and f.operator in OPERATORS_BY_TYPE[SEARCHABLE_FIELDS[f.field]]
+                and f.importance in {"required", "preferred"}
+                and value is not None):
             out.append({"field": f.field, "operator": f.operator,
-                        "value": f.value, "importance": f.importance})
+                        "value": value, "importance": f.importance})
     return out
 
 

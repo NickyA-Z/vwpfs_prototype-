@@ -140,8 +140,8 @@ export default function FindMyCar() {
       })
   }, [isDone, filters, rejected])
 
-  async function sendToAi(message: string) {
-    if (!message.trim() || chatBusy) return
+  async function sendToAi(message: string): Promise<boolean> {
+    if (!message.trim() || chatBusy) return false
     setChatBusy(true)
     try {
       const result = await chatTurn(message.trim(), chatState)
@@ -149,8 +149,10 @@ export default function FindMyCar() {
       setAiFilters(result.state.filters)
       setAiQuestion(result.follow_up?.question ?? null)
       setAiOffline(false)
+      return true
     } catch {
       setAiOffline(true)
+      return false
     } finally {
       setChatBusy(false)
     }
@@ -170,13 +172,17 @@ export default function FindMyCar() {
     }
   }
 
-  function start(text: string) {
+  async function start(text: string) {
     const trimmed = text.trim()
     if (!trimmed) return
     setBrief(trimmed)
     setDraft(trimmed)
-    setPhase('flow')
     setStep(0)
+    // The model branch drives the conversation one free-text answer at a time.
+    // Keep the deterministic button flow as a no-AI fallback.
+    setPhase('done')
+    const online = await sendToAi(trimmed)
+    if (!online) setPhase('flow')
   }
 
   function back() {
@@ -217,7 +223,7 @@ export default function FindMyCar() {
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') start(draft)
+    if (e.key === 'Enter') void start(draft)
   }
 
   function onRefineKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -248,7 +254,7 @@ export default function FindMyCar() {
           : 'No car fits everything'
       : question.title
   const bubbleBody = isIntro
-    ? "Tell me what kind of car you're looking for and I'll help you find it — after that it's all buttons."
+    ? "Tell me what kind of car you're looking for. I'll interpret it and ask one short follow-up at a time."
     : isDone
       ? aiQuestion
         ? aiQuestion
@@ -442,13 +448,13 @@ export default function FindMyCar() {
                   />
                   <span className="fmc-examples">
                     {EXAMPLES.map((label) => (
-                      <button key={label} type="button" className="fmc-example-btn" onClick={() => start(label)}>
+                      <button key={label} type="button" className="fmc-example-btn" onClick={() => void start(label)}>
                         e.g. {label}
                       </button>
                     ))}
                   </span>
                 </span>
-                <button type="button" className="fmc-submit-btn" onClick={() => start(draft)} aria-label="Submit">
+                <button type="button" className="fmc-submit-btn" onClick={() => void start(draft)} aria-label="Submit">
                   <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 19V5" />
                     <path d="M6 11l6-6 6 6" />
