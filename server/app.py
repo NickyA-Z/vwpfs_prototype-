@@ -17,6 +17,7 @@ Run with:  uvicorn server.app:app --reload --port 8000
 """
 from __future__ import annotations
 
+import functools
 import os
 
 from fastapi import FastAPI, HTTPException
@@ -116,6 +117,38 @@ def _car_payload(row: dict) -> dict:
 @app.get("/api/health")
 def health() -> dict:
     return {"ok": True, "gemini": bool(os.getenv("GEMINI_KEY"))}
+
+
+@functools.lru_cache(maxsize=1)
+def _field_meta() -> dict:
+    """Per searchable field: its type plus what the stock actually contains,
+    so the frontend can pick the right control for an AI follow-up question."""
+    import csv
+
+    from model.car_filter import DEFAULT_CARS_PATH
+
+    with open(DEFAULT_CARS_PATH, encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    meta: dict = {}
+    for field, ftype in SEARCHABLE_FIELDS.items():
+        entry: dict = {"type": ftype}
+        if ftype != "boolean":
+            raw = {row[field] for row in rows if row.get(field) not in ("", None)}
+            if ftype == "number":
+                numbers = sorted(float(v) for v in raw)
+                entry["min"] = numbers[0]
+                entry["max"] = numbers[-1]
+                if len(numbers) <= 8:
+                    entry["values"] = [int(n) if n == int(n) else n for n in numbers]
+            elif len(raw) <= 30:
+                entry["values"] = sorted(raw)
+        meta[field] = entry
+    return meta
+
+
+@app.get("/api/fields")
+def fields() -> dict:
+    return _field_meta()
 
 
 @app.post("/api/rank")

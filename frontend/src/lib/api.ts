@@ -102,6 +102,22 @@ export async function chatTurn(
   return res.json()
 }
 
+// Per searchable field: type plus the values/range in stock, used to pick
+// the right control for an AI follow-up question.
+export type FieldMeta = {
+  type: 'text' | 'number' | 'boolean'
+  values?: (string | number)[]
+  min?: number
+  max?: number
+}
+export type FieldsMeta = Record<string, FieldMeta>
+
+export async function fetchFields(): Promise<FieldsMeta> {
+  const res = await fetch('/api/fields')
+  if (!res.ok) throw new Error(`fields failed: ${res.status}`)
+  return res.json()
+}
+
 // ---- deterministic question answers -> dataset filters --------------------
 
 const BODY: Record<string, string> = {
@@ -201,8 +217,12 @@ const FIELD_LABELS: Record<string, string> = {
   merk_model: 'Model',
 }
 
+export function fieldLabel(field: string): string {
+  return FIELD_LABELS[field] ?? field.replaceAll('_', ' ')
+}
+
 export function describeFilter(f: SearchFilter): { label: string; value: string } {
-  const label = FIELD_LABELS[f.field] ?? f.field.replaceAll('_', ' ')
+  const label = fieldLabel(f.field)
   if (typeof f.value === 'boolean') {
     return { label, value: f.value ? 'yes' : 'no' }
   }

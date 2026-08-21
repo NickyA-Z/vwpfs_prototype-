@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import './FindMyCar.css'
-import { QUESTIONS, EXAMPLES, type Question, type SliderConfig } from './questions'
+import { QUESTIONS, EXAMPLES, FIXED_QUESTION_COUNT, type Question, type SliderConfig } from './questions'
 import {
-  answersToFilters, chatTurn, describeFilter, filterKey, rankCars,
-  type Car, type ChatState, type Contractvorm, type SearchFilter,
+  answersToFilters, chatTurn, describeFilter, fetchFields, fieldLabel, filterKey, rankCars,
+  type Car, type ChatState, type Contractvorm, type FieldsMeta, type SearchFilter,
 } from '../../lib/api'
 import CarViewer from '../../components/CarViewer'
 import Mascotte from '../../components/Mascotte'
@@ -12,6 +12,8 @@ type Phase = 'intro' | 'questions' | 'done'
 type Answers = Record<string, string>
 // fixed lease terms used by the deterministic pricing (advanced/lease_pricing.py)
 const LEASE_TERMS = { months: 48, kmPerYear: '15.000 km' }
+// how many follow-ups the AI advisor may ask before we show the match
+const MAX_AI_QUESTIONS = 6
 
 function dedupeFilters(filters: SearchFilter[]): SearchFilter[] {
   const seen = new Set<string>()
@@ -26,6 +28,10 @@ function dedupeFilters(filters: SearchFilter[]): SearchFilter[] {
 function euro(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === '') return '—'
   return `€${Number(value).toLocaleString('nl-NL')}`
+}
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
 function SliderControl({ config, lease, initial, onDone }: {
@@ -62,9 +68,10 @@ function SliderControl({ config, lease, initial, onDone }: {
   )
 }
 
-function TextControl({ placeholder, initial, onDone }: {
+function TextControl({ placeholder, initial, numeric, onDone }: {
   placeholder?: string
   initial: string
+  numeric: boolean
   onDone: (value: string) => void
 }) {
   const [value, setValue] = useState(initial)
@@ -73,10 +80,10 @@ function TextControl({ placeholder, initial, onDone }: {
     <div className="fmc-control">
       <input
         className="fmc-text-input"
-        inputMode="numeric"
+        inputMode={numeric ? 'numeric' : 'text'}
         value={value}
         placeholder={placeholder}
-        onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, ''))}
+        onChange={(e) => setValue(numeric ? e.target.value.replace(/[^\d]/g, '') : e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
         autoFocus
       />
@@ -104,13 +111,19 @@ export default function FindMyCar() {
   const [step, setStep] = useState(initialStep)
   const [answers, setAnswers] = useState<Answers>({})
   const [draft, setDraft] = useState('')
+  const [brief, setBrief] = useState('')
   const [awake, setAwake] = useState(false)
 
-  // classifications from the backend AI's reading of the free-text brief
+  // the AI advisor: filter classifications plus its follow-up questions,
+  // asked about whatever searchable labels are still missing
   const [aiFilters, setAiFilters] = useState<SearchFilter[]>([])
   const [removedKeys, setRemovedKeys] = useState<Set<string>>(new Set())
   const [chatState, setChatState] = useState<ChatState | null>(null)
+  const [aiQ, setAiQ] = useState<{ field: string; question: string } | null>(null)
+  const [aiTurns, setAiTurns] = useState(0)
+  const [aiBusy, setAiBusy] = useState(false)
   const [aiOffline, setAiOffline] = useState(false)
+  const [fieldsMeta, setFieldsMeta] = useState<FieldsMeta | null>(null)
 
   // matching
   const [cars, setCars] = useState<Car[]>([])
@@ -123,9 +136,12 @@ export default function FindMyCar() {
   const isQuestions = phase === 'questions'
   const isDone = phase === 'done'
 
-  const question: Question = QUESTIONS[Math.min(step, QUESTIONS.length - 1)]
   const contractvorm: Contractvorm = answers.contract === 'Lease' ? 'lease' : 'koop'
   const leaseBudget = contractvorm === 'lease' && Number(answers.budget) > 0 ? Number(answers.budget) : null
+
+  useEffect(() => {
+    fetchFields().then(setFieldsMeta).catch(() => {})
+  }, [])
 
   const filters = useMemo(
     () => dedupeFilters([...answersToFilters(answers), ...aiFilters])
@@ -152,22 +168,68 @@ export default function FindMyCar() {
       })
   }, [isDone, filters, rejected, contractvorm, leaseBudget])
 
-  async function classifyBrief(message: string) {
+  function applyAiResult(result: Awaited<ReturnType<typeof chatTurn>>, turns: number) {
+    setChatState(result.state)
+    setAiFilters(result.state.filters)
+    setAiOffline(false)
+    if (result.follow_up && !result.complete && turns < MAX_AI_QUESTIONS) {
+      setAiQ(result.follow_up)
+    } else {
+      setAiQ(null)
+      setPhase('done')
+    }
+  }
+
+  // Kick off the AI advisor once the fixed questions (contract, budget) are
+  // answered: the free-text brief (or a neutral opener) is its first turn.
+  async function startAi(answersNow: Answers) {
+    setAiBusy(true)
+    try {
+      const cv: Contractvorm = answersNow.contract === 'Lease' ? 'lease' : 'koop'
+      const budget = Number(answersNow.budget) > 0 ? Number(answersNow.budget) : null
+      // seed the conversation so the AI won't re-ask what the slider answered
+      const seed: ChatState | null = cv === 'koop' && budget
+        ? {
+            filters: [{ field: 'aanschafprijs', operator: 'max', value: budget, importance: 'required' }],
+            answered_fields: ['aanschafprijs'],
+            follow_up: null,
+          }
+        : null
+      const result = await chatTurn(
+        brief || 'Ik zoek een auto.',
+        seed,
+        cv,
+        cv === 'lease' && budget ? budget : undefined,
+      )
+      applyAiResult(result, 0)
+    } catch {
+      setAiOffline(true) // the hardcoded question list takes over
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  async function answerAi(message: string) {
+    if (aiBusy) return
+    setAiBusy(true)
+    setAiQ(null)
     try {
       const result = await chatTurn(message, chatState, contractvorm, leaseBudget ?? undefined)
-      setChatState(result.state)
-      setAiFilters(result.state.filters)
-      setAiOffline(false)
+      const turns = aiTurns + 1
+      setAiTurns(turns)
+      applyAiResult(result, turns)
     } catch {
-      setAiOffline(true)
+      setAiOffline(true) // continue with the hardcoded questions instead
+    } finally {
+      setAiBusy(false)
     }
   }
 
   // The chatbar only exists on first landing: it collapses away and the
-  // deterministic question popup takes over.
-  function leaveIntro(brief: string) {
+  // question popup takes over.
+  function leaveIntro(text: string) {
     if (introLeaving) return
-    if (brief) void classifyBrief(brief)
+    setBrief(text)
     setIntroLeaving(true)
     window.setTimeout(() => {
       setPhase('questions')
@@ -180,15 +242,15 @@ export default function FindMyCar() {
     setAnswers(nextAnswers)
     const nextStep = step + 1
     setStep(nextStep)
+    if (nextStep === FIXED_QUESTION_COUNT && !aiOffline) {
+      void startAi(nextAnswers)
+      return
+    }
     if (nextStep >= QUESTIONS.length) setPhase('done')
   }
 
   function back() {
     if (step > 0) setStep(step - 1)
-  }
-
-  function skip() {
-    pick(question.id, '')
   }
 
   function reset() {
@@ -197,10 +259,14 @@ export default function FindMyCar() {
     setStep(0)
     setAnswers({})
     setDraft('')
+    setBrief('')
     setAwake(false)
     setAiFilters([])
     setRemovedKeys(new Set())
     setChatState(null)
+    setAiQ(null)
+    setAiTurns(0)
+    setAiBusy(false)
     setAiOffline(false)
     setCars([])
     setRejected([])
@@ -222,6 +288,60 @@ export default function FindMyCar() {
   function onIntroKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && draft.trim()) leaveIntro(draft.trim())
   }
+
+  // What the popup shows right now: an AI follow-up about a missing label
+  // (control picked from the field's type and stock values), or the next
+  // hardcoded question (the fixed lead-ins, and the whole list as fallback).
+  type ActiveQuestion = {
+    id: string
+    title: string
+    body: string
+    control: Question['control']
+    options?: string[]
+    slider?: SliderConfig
+    placeholder?: string
+    skippable: boolean
+    ai: boolean
+  }
+
+  const activeQuestion: ActiveQuestion | null = (() => {
+    if (!isQuestions) return null
+    if (aiQ) {
+      const meta = fieldsMeta?.[aiQ.field]
+      const base = { id: aiQ.field, title: capitalize(fieldLabel(aiQ.field)), body: aiQ.question, skippable: true, ai: true }
+      if (meta?.type === 'boolean') return { ...base, control: 'segmented', options: ['Yes', 'No'] }
+      const options = meta?.values?.map(String)
+      if (options?.length) {
+        if (options.length <= 2) return { ...base, control: 'segmented', options }
+        if (options.length <= 6) return { ...base, control: 'choice', options }
+        return { ...base, control: 'dropdown', options }
+      }
+      return { ...base, control: 'text', placeholder: meta?.type === 'number' ? 'e.g. 50000' : 'Type your answer…' }
+    }
+    const q = QUESTIONS[Math.min(step, QUESTIONS.length - 1)]
+    return {
+      id: q.id, title: q.title, body: q.body, control: q.control,
+      options: q.options, slider: q.slider?.(answers), placeholder: q.placeholder,
+      skippable: q.skippable, ai: false,
+    }
+  })()
+
+  // waiting for the AI's next follow-up (no hardcoded question should show)
+  const aiPending = isQuestions && aiBusy && !aiQ
+
+  function submitAnswer(value: string) {
+    if (!activeQuestion) return
+    if (activeQuestion.ai) {
+      const field = activeQuestion.id
+      const answer = value === 'Yes' ? 'ja' : value === 'No' ? 'nee' : value
+      void answerAi(answer ? `${field}: ${answer}` : `${field} maakt niet uit`)
+    } else {
+      pick(activeQuestion.id, value)
+    }
+  }
+
+  const questionNumber = aiQ || aiPending ? FIXED_QUESTION_COUNT + aiTurns + 1 : step + 1
+  const totalQuestions = aiQ || aiPending ? FIXED_QUESTION_COUNT + MAX_AI_QUESTIONS : QUESTIONS.length
 
   const current = cars[0]
   const alternatives = cars.slice(1)
@@ -402,81 +522,92 @@ export default function FindMyCar() {
           </section>
         </main>
 
-        {isQuestions && (
+        {isQuestions && (activeQuestion || aiPending) && (
           <div className="fmc-popup-backdrop">
-            <div className="fmc-popup" key={question.id}>
+            <div className="fmc-popup" key={aiPending ? 'ai-pending' : activeQuestion!.id}>
               <Mascotte state="thinking" className="fmc-popup-mascotte" />
-              <span className="fmc-bubble-kicker">{`Question ${step + 1} of ${QUESTIONS.length}`}</span>
-              <span className="fmc-popup-title">{question.title}</span>
-              <span className="fmc-popup-body">{question.body}</span>
+              <span className="fmc-bubble-kicker">{`Question ${questionNumber} of ${totalQuestions}`}</span>
 
-              {question.control === 'choice' && (
-                <div className="fmc-options">
-                  {question.options!.map((label) => (
-                    <button
-                      key={label}
-                      type="button"
-                      className={`fmc-option-btn${answers[question.id] === label ? ' selected' : ''}`}
-                      onClick={() => pick(question.id, label)}
+              {aiPending ? (
+                <>
+                  <span className="fmc-popup-title">Hmm…</span>
+                  <span className="fmc-popup-body">Let me think about what to ask you next.</span>
+                </>
+              ) : (
+                <>
+                  <span className="fmc-popup-title">{activeQuestion!.title}</span>
+                  <span className="fmc-popup-body">{activeQuestion!.body}</span>
+
+                  {activeQuestion!.control === 'choice' && (
+                    <div className="fmc-options">
+                      {activeQuestion!.options!.map((label) => (
+                        <button
+                          key={label}
+                          type="button"
+                          className={`fmc-option-btn${answers[activeQuestion!.id] === label ? ' selected' : ''}`}
+                          onClick={() => submitAnswer(label)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeQuestion!.control === 'segmented' && (
+                    <div className="fmc-segmented">
+                      {activeQuestion!.options!.map((label) => (
+                        <button
+                          key={label}
+                          type="button"
+                          className={`fmc-segment${answers[activeQuestion!.id] === label ? ' selected' : ''}`}
+                          onClick={() => submitAnswer(label)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeQuestion!.control === 'slider' && (
+                    <SliderControl
+                      config={activeQuestion!.slider!}
+                      lease={contractvorm === 'lease'}
+                      initial={answers[activeQuestion!.id] ?? ''}
+                      onDone={(value) => submitAnswer(String(value))}
+                    />
+                  )}
+
+                  {activeQuestion!.control === 'dropdown' && (
+                    <select
+                      className="fmc-select"
+                      value={answers[activeQuestion!.id] ?? ''}
+                      onChange={(e) => submitAnswer(e.target.value)}
+                      autoFocus
                     >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
+                      <option value="" disabled>
+                        Choose…
+                      </option>
+                      {activeQuestion!.options!.map((label) => (
+                        <option key={label} value={label}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
 
-              {question.control === 'segmented' && (
-                <div className="fmc-segmented">
-                  {question.options!.map((label) => (
-                    <button
-                      key={label}
-                      type="button"
-                      className={`fmc-segment${answers[question.id] === label ? ' selected' : ''}`}
-                      onClick={() => pick(question.id, label)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {question.control === 'slider' && (
-                <SliderControl
-                  config={question.slider!(answers)}
-                  lease={contractvorm === 'lease'}
-                  initial={answers[question.id] ?? ''}
-                  onDone={(value) => pick(question.id, String(value))}
-                />
-              )}
-
-              {question.control === 'dropdown' && (
-                <select
-                  className="fmc-select"
-                  value={answers[question.id] ?? ''}
-                  onChange={(e) => pick(question.id, e.target.value)}
-                  autoFocus
-                >
-                  <option value="" disabled>
-                    Choose…
-                  </option>
-                  {question.options!.map((label) => (
-                    <option key={label} value={label}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {question.control === 'text' && (
-                <TextControl
-                  placeholder={question.placeholder}
-                  initial={answers[question.id] ?? ''}
-                  onDone={(value) => pick(question.id, value)}
-                />
+                  {activeQuestion!.control === 'text' && (
+                    <TextControl
+                      placeholder={activeQuestion!.placeholder}
+                      initial={answers[activeQuestion!.id] ?? ''}
+                      numeric={!activeQuestion!.ai || fieldsMeta?.[activeQuestion!.id]?.type === 'number'}
+                      onDone={(value) => submitAnswer(value)}
+                    />
+                  )}
+                </>
               )}
 
               <div className="fmc-popup-footer">
-                {step > 0 ? (
+                {!aiPending && !activeQuestion!.ai && step > 0 ? (
                   <button type="button" className="fmc-back-btn" onClick={back}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M19 12H5" />
@@ -488,10 +619,10 @@ export default function FindMyCar() {
                   <span />
                 )}
                 <span className="fmc-progress-track">
-                  <span className="fmc-progress-fill" style={{ width: `${(step / QUESTIONS.length) * 100}%` }} />
+                  <span className="fmc-progress-fill" style={{ width: `${((questionNumber - 1) / totalQuestions) * 100}%` }} />
                 </span>
-                {question.skippable ? (
-                  <button type="button" className="fmc-skip-btn" onClick={skip}>
+                {!aiPending && activeQuestion!.skippable ? (
+                  <button type="button" className="fmc-skip-btn" onClick={() => submitAnswer('')}>
                     Skip
                   </button>
                 ) : (

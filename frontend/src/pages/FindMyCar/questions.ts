@@ -16,6 +16,12 @@ export type Question = {
   skippable: boolean
 }
 
+// The first FIXED_QUESTION_COUNT questions are always asked locally (the AI
+// can't ask them: contract form and budget aren't dataset labels). The rest
+// is the fallback when the AI advisor is offline — with a Gemini key set, the
+// AI asks its own follow-ups about whatever labels are still missing.
+export const FIXED_QUESTION_COUNT = 2
+
 export const QUESTIONS: Question[] = [
   {
     id: 'contract',
@@ -24,6 +30,18 @@ export const QUESTIONS: Question[] = [
     control: 'segmented',
     options: ['Buy', 'Lease'],
     skippable: false,
+  },
+  {
+    id: 'budget',
+    title: "What's your budget?",
+    body: 'I’ll stay under this — or get as close as I can.',
+    control: 'slider',
+    // lease minimum sits just above the cheapest monthly price in stock (€173)
+    slider: (answers) =>
+      answers.contract === 'Lease'
+        ? { min: 175, max: 1500, step: 25, start: 500 }
+        : { min: 5000, max: 120000, step: 1000, start: 35000 },
+    skippable: true,
   },
   {
     id: 'body',
@@ -63,18 +81,6 @@ export const QUESTIONS: Question[] = [
     body: 'No wrong answer — automatics dominate the electric stock.',
     control: 'segmented',
     options: ['Manual', 'Automatic'],
-    skippable: true,
-  },
-  {
-    id: 'budget',
-    title: "What's your budget?",
-    body: 'I’ll stay under this — or get as close as I can.',
-    control: 'slider',
-    // lease minimum sits just above the cheapest monthly price in stock (€173)
-    slider: (answers) =>
-      answers.contract === 'Lease'
-        ? { min: 175, max: 1500, step: 25, start: 500 }
-        : { min: 5000, max: 120000, step: 1000, start: 35000 },
     skippable: true,
   },
   {
