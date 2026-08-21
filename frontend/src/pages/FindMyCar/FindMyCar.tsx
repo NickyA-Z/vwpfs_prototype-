@@ -1,6 +1,11 @@
-import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import './FindMyCar.css'
-import { QUESTIONS, EXAMPLES, computeMatches } from './questions'
+import { QUESTIONS, EXAMPLES } from './questions'
+import {
+  answersToFilters, chatTurn, describeFilter, filterKey, rankCars,
+  type Car, type ChatState, type SearchFilter,
+} from '../../lib/api'
+import CarViewer from '../../components/CarViewer'
 
 type Phase = 'intro' | 'flow' | 'done'
 type Answers = Record<string, string>
@@ -67,6 +72,21 @@ const RAIL_ITEMS: { facet: keyof typeof RAIL_FALLBACK; label: string; icon: Reac
   },
 ]
 
+function dedupeFilters(filters: SearchFilter[]): SearchFilter[] {
+  const seen = new Set<string>()
+  return filters.filter((f) => {
+    const key = filterKey(f)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function euro(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '—'
+  return `€${Number(value).toLocaleString('nl-NL')}`
+}
+
 export default function FindMyCar() {
   const [phase, setPhase] = useState<Phase>('intro')
   const [step, setStep] = useState(0)
@@ -74,17 +94,80 @@ export default function FindMyCar() {
   const [draft, setDraft] = useState('')
   const [brief, setBrief] = useState('')
 
+  // classifications: deterministic (from the button answers) + AI (from chat)
+  const [aiFilters, setAiFilters] = useState<SearchFilter[]>([])
+  const [removedKeys, setRemovedKeys] = useState<Set<string>>(new Set())
+  const [chatState, setChatState] = useState<ChatState | null>(null)
+  const [aiQuestion, setAiQuestion] = useState<string | null>(null)
+  const [aiOffline, setAiOffline] = useState(false)
+  const [refineDraft, setRefineDraft] = useState('')
+  const [chatBusy, setChatBusy] = useState(false)
+
+  // matching
+  const [cars, setCars] = useState<Car[]>([])
+  const [rejected, setRejected] = useState<string[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState(false)
+  const rankSeq = useRef(0)
+
   const question = QUESTIONS[Math.min(step, QUESTIONS.length - 1)]
   const isIntro = phase === 'intro'
   const isFlow = phase === 'flow'
   const isDone = phase === 'done'
+
+  const filters = useMemo(
+    () => dedupeFilters([...answersToFilters(answers), ...aiFilters])
+      .filter((f) => !removedKeys.has(filterKey(f))),
+    [answers, aiFilters, removedKeys],
+  )
+
+  useEffect(() => {
+    if (!isDone) return
+    const seq = ++rankSeq.current
+    setSearching(true)
+    rankCars(filters, rejected, 4)
+      .then((found) => {
+        if (rankSeq.current !== seq) return
+        setCars(found)
+        setSearchError(false)
+      })
+      .catch(() => {
+        if (rankSeq.current !== seq) return
+        setSearchError(true)
+      })
+      .finally(() => {
+        if (rankSeq.current === seq) setSearching(false)
+      })
+  }, [isDone, filters, rejected])
+
+  async function sendToAi(message: string) {
+    if (!message.trim() || chatBusy) return
+    setChatBusy(true)
+    try {
+      const result = await chatTurn(message.trim(), chatState)
+      setChatState(result.state)
+      setAiFilters(result.state.filters)
+      setAiQuestion(result.follow_up?.question ?? null)
+      setAiOffline(false)
+    } catch {
+      setAiOffline(true)
+    } finally {
+      setChatBusy(false)
+    }
+  }
 
   function pick(id: string, value: string) {
     const nextAnswers = { ...answers, [id]: value }
     const nextStep = step + 1
     setAnswers(nextAnswers)
     setStep(nextStep)
-    setPhase(nextStep >= QUESTIONS.length ? 'done' : 'flow')
+    if (nextStep >= QUESTIONS.length) {
+      setPhase('done')
+      // best effort: let the backend AI classify the free-text brief too
+      if (brief) void sendToAi(brief)
+    } else {
+      setPhase('flow')
+    }
   }
 
   function start(text: string) {
@@ -115,10 +198,33 @@ export default function FindMyCar() {
     setAnswers({})
     setDraft('')
     setBrief('')
+    setAiFilters([])
+    setRemovedKeys(new Set())
+    setChatState(null)
+    setAiQuestion(null)
+    setCars([])
+    setRejected([])
+    setSearchError(false)
+    setRefineDraft('')
+  }
+
+  function removeFilter(key: string) {
+    setRemovedKeys((prev) => new Set(prev).add(key))
+  }
+
+  function rejectCar(id: string) {
+    setRejected((prev) => [...prev, id])
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') start(draft)
+  }
+
+  function onRefineKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      void sendToAi(refineDraft)
+      setRefineDraft('')
+    }
   }
 
   function facetValue(facet: keyof typeof RAIL_FALLBACK) {
@@ -128,18 +234,46 @@ export default function FindMyCar() {
     return values.length ? values.join(' · ') : RAIL_FALLBACK[facet]
   }
 
-  const bubbleKicker = isIntro ? 'Your car advisor' : isDone ? 'Result' : question.kicker
-  const bubbleTitle = isIntro ? 'Hey there!' : isDone ? 'Three to drive.' : question.title
+  const current = cars[0]
+  const alternatives = cars.slice(1)
+
+  const bubbleKicker = isIntro ? 'Your car advisor' : isDone ? 'Your match' : question.kicker
+  const bubbleTitle = isIntro
+    ? 'Hey there!'
+    : isDone
+      ? searching && !current
+        ? 'Searching…'
+        : current
+          ? `${current.merk} ${current.model} ${current.uitvoering}`
+          : 'No car fits everything'
+      : question.title
   const bubbleBody = isIntro
     ? "Tell me what kind of car you're looking for and I'll help you find it — after that it's all buttons."
     : isDone
-      ? `Based on “${brief || 'your brief'}” and your eight answers, these fit best.`
+      ? aiQuestion
+        ? aiQuestion
+        : current
+          ? `This ${current.kleur.toLowerCase()} ${current.carrosserie.toLowerCase()} matches ${current.matched_preferences.length} of your preferences${current.is_alternatief ? ` — it's €${current.budget_overschrijding.toLocaleString('nl-NL')} over budget, the closest I could get` : ''}. Not the one? Reject it and I'll find another.`
+          : 'Every card on the left is a hard requirement right now — remove one and I’ll look again.'
       : question.body
 
   const progressLabel = `Question ${step + 1} of ${QUESTIONS.length}`
   const progressWidth = `${(step / QUESTIONS.length) * 100}%`
 
-  const matches = isDone ? computeMatches(answers) : []
+  const specs = current
+    ? [
+        ['Price', euro(current.aanschafprijs)],
+        ['Fuel', current.brandstof],
+        ['Gearbox', current.transmissie],
+        ['Power', `${current.vermogen_pk} hp`],
+        ['Seats · doors', `${current.zitplaatsen} · ${current.deuren}`],
+        current.brandstof === 'Elektrisch'
+          ? ['Range', `${current.actieradius_km} km`]
+          : ['Consumption', current.verbruik_l_100km ? `${current.verbruik_l_100km} l/100km` : '—'],
+        ['Boot', `${current.bagageruimte_liter} l`],
+        ['Condition', `${current.conditie} (${current.bouwjaar})`],
+      ]
+    : []
 
   return (
     <div className="fmc">
@@ -178,31 +312,62 @@ export default function FindMyCar() {
 
         <main className="fmc-main">
           <section className="fmc-rail">
-            {RAIL_ITEMS.map((item) => {
-              const value = facetValue(item.facet)
-              const filled = value !== RAIL_FALLBACK[item.facet]
-              return (
-                <div key={item.facet} className="fmc-rail-item">
-                  <span className="fmc-rail-icon">{item.icon}</span>
-                  <span className="fmc-rail-text">
-                    <span className="fmc-rail-title">{item.label}</span>
-                    <span className={`fmc-rail-value${filled ? ' filled' : ''}`}>{value}</span>
-                  </span>
-                </div>
-              )
-            })}
+            {!isDone &&
+              RAIL_ITEMS.map((item) => {
+                const value = facetValue(item.facet)
+                const filled = value !== RAIL_FALLBACK[item.facet]
+                return (
+                  <div key={item.facet} className="fmc-rail-item">
+                    <span className="fmc-rail-icon">{item.icon}</span>
+                    <span className="fmc-rail-text">
+                      <span className="fmc-rail-title">{item.label}</span>
+                      <span className={`fmc-rail-value${filled ? ' filled' : ''}`}>{value}</span>
+                    </span>
+                  </div>
+                )
+              })}
+
+            {isDone && (
+              <>
+                <span className="fmc-filter-heading">Your criteria</span>
+                {filters.length === 0 && <span className="fmc-filter-empty">No criteria — showing everything.</span>}
+                {filters.map((f) => {
+                  const key = filterKey(f)
+                  const { label, value } = describeFilter(f)
+                  return (
+                    <div key={key} className={`fmc-filter-card${f.importance === 'preferred' ? ' preferred' : ''}`}>
+                      <span className="fmc-rail-text">
+                        <span className="fmc-rail-title">
+                          {label}
+                          {f.importance === 'preferred' && <em> · preference</em>}
+                        </span>
+                        <span className="fmc-rail-value filled">{value}</span>
+                      </span>
+                      <button type="button" className="fmc-filter-remove" aria-label={`Remove ${label}`} onClick={() => removeFilter(key)}>
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+                {aiOffline && <span className="fmc-filter-empty">AI advisor is offline — matching on your answers only.</span>}
+              </>
+            )}
           </section>
 
           <section className="fmc-mascot-section">
             <div className="fmc-mascot-plate" />
-            <div className="fmc-mascot-frame">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 17h2v-4l-2-5H5L3 13v4h2" />
-                <path d="M5 17h14" />
-                <circle cx="7.5" cy="17" r="2" />
-                <circle cx="16.5" cy="17" r="2" />
-              </svg>
-            </div>
+            {isDone && current ? (
+              <CarViewer spec={current.spec} />
+            ) : (
+              <div className="fmc-mascot-frame">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 17h2v-4l-2-5H5L3 13v4h2" />
+                  <path d="M5 17h14" />
+                  <circle cx="7.5" cy="17" r="2" />
+                  <circle cx="16.5" cy="17" r="2" />
+                </svg>
+              </div>
+            )}
           </section>
 
           <section className="fmc-panel">
@@ -222,20 +387,36 @@ export default function FindMyCar() {
               </div>
             )}
 
-            {isDone && (
+            {isDone && searchError && (
               <div className="fmc-matches">
-                {matches.map((m) => (
-                  <div key={m.name} className="fmc-match-card">
-                    <div className="fmc-match-row">
-                      <span className="fmc-match-name">{m.name}</span>
-                      <span className="fmc-match-price">{m.price}</span>
+                <span className="fmc-filter-empty">Couldn’t reach the search server — is `uvicorn server.app:app` running?</span>
+              </div>
+            )}
+
+            {isDone && current && (
+              <div className="fmc-matches">
+                <div className="fmc-match-card fmc-specs">
+                  {specs.map(([label, value]) => (
+                    <div key={label} className="fmc-match-row">
+                      <span className="fmc-match-spec">{label}</span>
+                      <span className="fmc-match-name">{value}</span>
                     </div>
-                    <span className="fmc-match-spec">{m.spec}</span>
+                  ))}
+                </div>
+                <button type="button" className="fmc-see-all fmc-reject" onClick={() => rejectCar(current.id)}>
+                  Not this one — find another
+                </button>
+                {alternatives.map((car) => (
+                  <div key={car.id} className="fmc-match-card">
+                    <div className="fmc-match-row">
+                      <span className="fmc-match-name">{`${car.merk} ${car.model} ${car.uitvoering}`}</span>
+                      <span className="fmc-match-price">{euro(car.aanschafprijs)}</span>
+                    </div>
+                    <span className="fmc-match-spec">
+                      {[car.brandstof, car.transmissie, `${car.zitplaatsen} seats`, car.kleur].join('  ·  ')}
+                    </span>
                   </div>
                 ))}
-                <button type="button" className="fmc-see-all">
-                  See all matches
-                </button>
               </div>
             )}
           </section>
@@ -296,6 +477,35 @@ export default function FindMyCar() {
                     Skip
                   </button>
                 </span>
+              </div>
+            )}
+
+            {isDone && !aiOffline && (
+              <div className="fmc-intro-row">
+                <span className="fmc-intro-col">
+                  <input
+                    className="fmc-input"
+                    value={refineDraft}
+                    onChange={(e) => setRefineDraft(e.target.value)}
+                    onKeyDown={onRefineKeyDown}
+                    placeholder={chatBusy ? 'Thinking…' : aiQuestion ?? 'Tell me more, or answer my question…'}
+                    disabled={chatBusy}
+                  />
+                </span>
+                <button
+                  type="button"
+                  className="fmc-submit-btn"
+                  onClick={() => {
+                    void sendToAi(refineDraft)
+                    setRefineDraft('')
+                  }}
+                  aria-label="Send"
+                >
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 19V5" />
+                    <path d="M6 11l6-6 6 6" />
+                  </svg>
+                </button>
               </div>
             )}
           </div>

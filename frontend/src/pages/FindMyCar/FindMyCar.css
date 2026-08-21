@@ -225,6 +225,76 @@
   width: 40%;
   height: 40%;
 }
+.fmc-viewer {
+  position: relative;
+  width: 100%;
+  height: min(96%, 460px);
+  align-self: end;
+}
+.fmc-viewer canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.fmc-filter-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(28, 30, 33, 0.45);
+  padding: 4px 12px 0;
+}
+.fmc-filter-empty {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: rgba(28, 30, 33, 0.5);
+  padding: 2px 12px;
+}
+.fmc-filter-card {
+  display: grid;
+  grid-template-columns: 1fr 24px;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 8px 7px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 16px rgba(20, 22, 26, 0.07);
+}
+.fmc-filter-card.preferred {
+  background: rgba(255, 255, 255, 0.45);
+}
+.fmc-filter-card .fmc-rail-title em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 11.5px;
+  color: rgba(28, 30, 33, 0.45);
+}
+.fmc-filter-remove {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 9px;
+  background: rgba(28, 30, 33, 0.06);
+  color: rgba(28, 30, 33, 0.6);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.fmc-filter-remove:hover {
+  background: rgba(200, 40, 40, 0.12);
+  color: #a02020;
+}
+
+.fmc-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.fmc-reject {
+  cursor: pointer;
+}
 
 .fmc-panel {
   flex: 2 1 300px;
