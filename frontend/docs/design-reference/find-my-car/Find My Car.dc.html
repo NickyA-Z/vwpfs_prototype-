@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/industry-a74e656a-77f4-45c2-8071-a0a0dc19ac86/styles.css">
+<script src="_ds/industry-a74e656a-77f4-45c2-8071-a0a0dc19ac86/_ds_bundle.js"></script>
+<script src="./image-slot.js"></script>
+<style>
+body { margin: 0; }
+a { color: var(--color-accent); }
+a:hover { color: var(--color-accent-700); }
+</style>
+</helmet>
+
+<div style="height: 100vh; min-height: 460px; display: flex; flex-direction: column; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); overflow: hidden;">
+
+  <header class="nav" style="flex: none; padding: 12px 24px; gap: 14px; border-bottom: 1px solid var(--color-divider);">
+    <span class="nav-brand" style="display: flex; align-items: center; gap: 10px; font-size: 21px; letter-spacing: 0.01em;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2v-4l-2-5H5L3 13v4h2"></path><path d="M5 17h14"></path><circle cx="7.5" cy="17" r="2"></circle><circle cx="16.5" cy="17" r="2"></circle></svg>
+      Find My Car
+    </span>
+    <span class="tag tag-outline" style="display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;">
+      <span style="width: 6px; height: 6px; background: var(--color-accent);"></span>{{ statusLabel }}
+    </span>
+    <button class="btn btn-secondary" onClick="{{ reset }}" style="gap: 8px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path></svg>
+      Reset
+    </button>
+    <button class="btn btn-secondary" style="gap: 8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      Menu
+    </button>
+  </header>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-wrap: nowrap; gap: 22px; padding: 18px 24px 0; align-items: stretch; max-width: 1560px; width: 100%; margin: 0 auto;">
+
+    <sc-if value="{{ railVisible }}" hint-placeholder-val="{{ true }}">
+    <section style="flex: 1 1 190px; min-width: 178px; max-width: 288px; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+      <h6 style="margin: 0 0 2px; color: color-mix(in srgb, var(--color-text) 55%, transparent);">Specification</h6>
+
+      <div class="blueprint" style="display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: center; padding: 7px 11px;">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: .7; width: 18px; height: 18px;"><path d="M19 17h2v-4l-2-5H5L3 13v4h2"></path><path d="M5 17h14"></path><circle cx="7.5" cy="17" r="2"></circle><circle cx="16.5" cy="17" r="2"></circle></svg>
+        <div>
+          <div style="font-family: var(--font-heading); font-weight: 600; font-size: 14.5px; line-height: 1.15;">Body type</div>
+          <div style="font-size: 11.5px; line-height: 1.35; color: {{ railBodyTone }};">{{ railBody }}</div>
+        </div>
+      </div>
+
+      <div class="blueprint" style="display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: center; padding: 7px 11px;">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: .7; width: 18px; height: 18px;"><path d="M12 2v20"></path><path d="M16 6.5C16 5 14.2 4 12 4S8 5 8 6.8 9.6 9.4 12 10s4 1.6 4 3.4S14.2 16 12 16s-4-1-4-2.5"></path></svg>
+        <div>
+          <div style="font-family: var(--font-heading); font-weight: 600; font-size: 14.5px; line-height: 1.15;">Budget</div>
+          <div style="font-size: 11.5px; line-height: 1.35; color: {{ railBudgetTone }};">{{ railBudget }}</div>
+        </div>
+      </div>
+
+      <div class="blueprint" style="display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: center; padding: 7px 11px;">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: .7; width: 18px; height: 18px;"><path d="M3 22V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v18"></path><path d="M3 12h10"></path><path d="M16 8h3l2 3v8a2 2 0 0 1-4 0v-5h-1"></path></svg>
+        <div>
+          <div style="font-family: var(--font-heading); font-weight: 600; font-size: 14.5px; line-height: 1.15;">Fuel &amp; gearbox</div>
+          <div style="font-size: 11.5px; line-height: 1.35; color: {{ railFuelTone }};">{{ railFuel }}</div>
+        </div>
+      </div>
+
+      <div class="blueprint" style="display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: center; padding: 7px 11px;">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: .7; width: 18px; height: 18px;"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"></path></svg>
+        <div>
+          <div style="font-family: var(--font-heading); font-weight: 600; font-size: 14.5px; line-height: 1.15;">Priorities</div>
+          <div style="font-size: 11.5px; line-height: 1.35; color: {{ railFeaturesTone }};">{{ railFeatures }}</div>
+        </div>
+      </div>
+
+      <div class="blueprint" style="display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: center; padding: 7px 11px;">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: .7; width: 18px; height: 18px;"><path d="M12 3l7 3v5.5c0 4.3-2.9 7.9-7 9.5-4.1-1.6-7-5.2-7-9.5V6z"></path></svg>
+        <div>
+          <div style="font-family: var(--font-heading); font-weight: 600; font-size: 14.5px; line-height: 1.15;">Brand</div>
+          <div style="font-size: 11.5px; line-height: 1.35; color: {{ railBrandTone }};">{{ railBrand }}</div>
+        </div>
+      </div>
+
+    </section>
+    </sc-if>
+
+    <section style="flex: 2 1 220px; position: relative; min-width: 168px; min-height: 0; display: grid; place-items: end center; padding-bottom: 34px; overflow: hidden;">
+      <div style="position: absolute; inset: 0; background-image: linear-gradient(to right, color-mix(in srgb, var(--color-text) 7%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--color-text) 7%, transparent) 1px, transparent 1px); background-size: 34px 34px; mask-image: radial-gradient(ellipse 70% 75% at 50% 55%, #000 30%, transparent 78%);"></div>
+      <div style="position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); width: min(420px, calc(100% - 14px)); min-width: 0; aspect-ratio: 1; max-height: calc(100% - 34px); border: 1px solid var(--color-divider); background: color-mix(in srgb, var(--color-accent) 6%, transparent);"></div>
+      <div class="blueprint" style="position: relative; min-width: 0; width: min(340px, calc(100% - 16px)); height: min(420px, 100%); max-height: calc(100% - 26px);">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <image-slot id="mascot" shape="rect" fit="contain" placeholder="Drop mascot render"></image-slot>
+      </div>
+      <div style="position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(560px, 100%); height: 1px; background: var(--color-divider);"></div>
+      <div style="position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); font-family: var(--font-heading); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent); white-space: nowrap;">Fig. 01 — your advisor</div>
+    </section>
+
+    <section style="flex: 2 1 300px; min-width: 268px; max-width: 420px; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 2px 4px 8px 0; overflow-y: auto;">
+      <div class="blueprint" style="position: relative; padding: 18px 20px 17px; background: color-mix(in srgb, var(--color-neutral-100) 70%, transparent);">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="font-family: var(--font-heading); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 10px;">{{ bubbleKicker }}</div>
+        <h2 style="font-size: clamp(28px, 3.2vw, 38px); margin: 0 0 10px;">{{ bubbleTitle }}</h2>
+        <p style="margin: 0; font-size: 16px; line-height: 1.5; max-width: 30ch; color: color-mix(in srgb, var(--color-text) 80%, transparent);">{{ bubbleBody }}</p>
+      </div>
+
+      <sc-if value="{{ hasOptions }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <sc-for list="{{ options }}" as="opt" hint-placeholder-count="0">
+          <button class="btn {{ opt.cls }}" onClick="{{ opt.onClick }}" style="padding: 11px 18px; font-size: 15px;">{{ opt.label }}</button>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <sc-for list="{{ matches }}" as="m" hint-placeholder-count="0">
+          <div class="card blueprint" style="padding: 14px 16px; gap: 4px;">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+              <span class="card-title">{{ m.name }}</span>
+              <span style="font-family: var(--font-heading); font-size: 16px; color: var(--color-accent-700);">{{ m.price }}</span>
+            </div>
+            <div class="card-meta">{{ m.spec }}</div>
+          </div>
+        </sc-for>
+        <button class="btn btn-primary blueprint" style="align-self: flex-start; padding: 12px 20px; font-size: 15px;">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          See all matches
+        </button>
+      </div>
+      </sc-if>
+    </section>
+  </main>
+
+  <footer style="flex: none; padding: 10px 24px 14px; display: flex; justify-content: center;">
+    <div style="width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 7px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase; font-family: var(--font-heading); color: color-mix(in srgb, var(--color-text) 50%, transparent);">
+        <span>{{ progressLabel }}</span>
+        <span>{{ modeLabel }}</span>
+      </div>
+      <div style="height: 2px; background: color-mix(in srgb, var(--color-text) 10%, transparent);">
+        <div style="height: 2px; background: var(--color-accent); width: {{ progressWidth }};"></div>
+      </div>
+
+      <sc-if value="{{ isIntro }}" hint-placeholder-val="{{ true }}">
+      <div class="blueprint" style="display: flex; align-items: center; gap: 14px; padding: 10px 14px; margin-top: 5px;">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-accent); flex: none;"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18 16.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"></path></svg>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 9px;">
+          <input class="input" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" placeholder="Describe the car you're looking for…" style="border: 0; background: transparent; padding: 0; font-size: 17px; min-height: 26px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <sc-for list="{{ examples }}" as="ex" hint-placeholder-count="3">
+              <button class="btn btn-secondary" onClick="{{ ex.onClick }}" style="font-size: 13px; padding: 6px 12px; font-family: var(--font-body); color: color-mix(in srgb, var(--color-text) 65%, transparent);">{{ ex.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <button class="btn btn-primary blueprint" onClick="{{ submit }}" style="width: 46px; height: 46px; padding: 0; flex: none;">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg>
+        </button>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isFlow }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 8px; padding: 12px 2px; border-top: 1px solid var(--color-divider);">
+        <span style="font-size: 13.5px; color: color-mix(in srgb, var(--color-text) 60%, transparent);">Typing is done — answer with the buttons above.</span>
+        <span style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" onClick="{{ back }}" style="gap: 8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M11 18l-6-6 6-6"></path></svg>
+            Back
+          </button>
+          <button class="btn btn-ghost" onClick="{{ skip }}">Skip</button>
+        </span>
+      </div>
+      </sc-if>
+    </div>
+  </footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;statusLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Online&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;railVisible&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;optionStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;outline&quot;,&quot;solid&quot;],&quot;default&quot;:&quot;outline&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const QUESTIONS = [
+  { id: "body", facet: "body", kicker: "Question 01", title: "What shape?", body: "Pick the body that fits your life — you can change it later.", options: ["Sedan", "SUV", "Hatchback", "Estate", "Coupé"] },
+  { id: "doors", facet: "body", kicker: "Question 02", title: "How many doors?", body: "Two for the look, four for the school run.", options: ["2", "4"] },
+  { id: "seats", facet: "body", kicker: "Question 03", title: "How many seats?", body: "Count the people you carry on a normal week.", options: ["2", "4–5", "6+"] },
+  { id: "fuel", facet: "fuel", kicker: "Question 04", title: "What should it run on?", body: "This one moves the running cost more than anything else.", options: ["Petrol", "Diesel", "Hybrid", "Electric"] },
+  { id: "gearbox", facet: "fuel", kicker: "Question 05", title: "Manual or automatic?", body: "No wrong answer. Automatics dominate the used electric stock.", options: ["Manual", "Automatic"] },
+  { id: "budget", facet: "budget", kicker: "Question 06", title: "What's your range?", body: "All-in price, before I filter anything out.", options: ["Under €15k", "€15–30k", "€30–50k", "€50k+"] },
+  { id: "brand", facet: "brand", kicker: "Question 07", title: "Leaning toward a badge?", body: "Only if you care — otherwise let me look everywhere.", options: ["No preference", "German", "Japanese", "Korean", "American"] },
+  { id: "priority", facet: "features", kicker: "Question 08", title: "What matters most?", body: "The tie-breaker when two cars are otherwise equal.", options: ["Tech", "Safety", "Comfort", "Running cost"] }
+];
+
+const EXAMPLES = ["a family car", "sporty and fast", "a cheap electric SUV"];
+
+class Component extends DCLogic {
+  state = { phase: "intro", step: 0, answers: {}, draft: "", brief: "" };
+
+  pick(id, value) {
+    this.setState(s => {
+      const answers = { ...s.answers, [id]: value };
+      const step = s.step + 1;
+      return { answers, step, phase: step >= QUESTIONS.length ? "done" : "flow" };
+    });
+  }
+
+  start(text) {
+    const t = (text || "").trim();
+    if (!t) return;
+    this.setState({ brief: t, draft: t, phase: "flow", step: 0 });
+  }
+
+  facetText(facet, fallback) {
+    const vals = QUESTIONS.filter(q => q.facet === facet).map(q => this.state.answers[q.id]).filter(Boolean);
+    if (!vals.length) return { text: fallback, tone: "color-mix(in srgb, var(--color-text) 50%, transparent)" };
+    return { text: vals.join(" · "), tone: "var(--color-accent-700)" };
+  }
+
+  matches() {
+    const a = this.state.answers;
+    const body = a.body || "Sedan";
+    const fuel = a.fuel || "Petrol";
+    const gearbox = a.gearbox || "Automatic";
+    const seats = a.seats || "4–5";
+    const price = { "Under €15k": ["€12,400", "€13,950", "€14,600"], "€15–30k": ["€18,900", "€24,500", "€28,750"], "€30–50k": ["€33,400", "€39,900", "€46,200"], "€50k+": ["€54,900", "€61,500", "€72,000"] }[a.budget || "€15–30k"];
+    return ["Mid-range " + body, "Well-kept " + body, "Low-mileage " + body].map((name, i) => ({
+      name,
+      price: price[i],
+      spec: [fuel, gearbox, seats + " seats", (a.doors || "4") + " doors"].join("  ·  ")
+    }));
+  }
+
+  renderVals() {
+    const { phase, step } = this.state;
+    const q = QUESTIONS[Math.min(step, QUESTIONS.length - 1)];
+    const optionCls = (this.props.optionStyle ?? "outline") === "solid" ? "btn-primary" : "btn-secondary";
+    const isFlow = phase === "flow";
+    const isDone = phase === "done";
+
+    const rails = {
+      body: this.facetText("body", "Sedan, SUV, hatchback…"),
+      budget: this.facetText("budget", "What's your range?"),
+      fuel: this.facetText("fuel", "Petrol, diesel, electric…"),
+      features: this.facetText("features", "Tech, safety, comfort…"),
+      brand: this.facetText("brand", "Your preferred badges")
+    };
+
+    return {
+      statusLabel: this.props.statusLabel ?? "Online",
+      railVisible: this.props.railVisible ?? true,
+
+      railBody: rails.body.text, railBodyTone: rails.body.tone,
+      railBudget: rails.budget.text, railBudgetTone: rails.budget.tone,
+      railFuel: rails.fuel.text, railFuelTone: rails.fuel.tone,
+      railFeatures: rails.features.text, railFeaturesTone: rails.features.tone,
+      railBrand: rails.brand.text, railBrandTone: rails.brand.tone,
+
+      isIntro: phase === "intro",
+      isFlow,
+      isDone,
+      hasOptions: isFlow,
+
+      bubbleKicker: phase === "intro" ? "Advisor · standing by" : isDone ? "Result" : q.kicker,
+      bubbleTitle: phase === "intro" ? "Hey there!" : isDone ? "Three to drive." : q.title,
+      bubbleBody: phase === "intro"
+        ? "Tell me what kind of car you're after and I'll take it from there — after that it's all buttons."
+        : isDone
+          ? "Based on \u201C" + (this.state.brief || "your brief") + "\u201D and your eight answers, these fit best."
+          : q.body,
+
+      options: isFlow ? q.options.map(label => ({ label, cls: optionCls, onClick: () => this.pick(q.id, label) })) : [],
+      matches: isDone ? this.matches() : [],
+
+      progressLabel: phase === "intro" ? "Step 1 — describe it in your own words" : isDone ? "Complete — 8 of 8" : "Question " + (step + 1) + " of " + QUESTIONS.length,
+      modeLabel: phase === "intro" ? "Free text" : "Buttons only",
+      progressWidth: (phase === "intro" ? 4 : (step / QUESTIONS.length) * 100) + "%",
+
+      draft: this.state.draft,
+      examples: EXAMPLES.map(label => ({ label: "e.g. " + label, onClick: () => this.start(label) })),
+      onDraft: e => this.setState({ draft: e.target.value }),
+      onKey: e => { if (e.key === "Enter") this.start(this.state.draft); },
+      submit: () => this.start(this.state.draft),
+      back: () => this.setState(s => (s.step === 0 ? { phase: "intro" } : { step: s.step - 1, phase: "flow" })),
+      skip: () => this.pick(QUESTIONS[Math.min(step, QUESTIONS.length - 1)].id, ""),
+      reset: () => this.setState({ phase: "intro", step: 0, answers: {}, draft: "", brief: "" })
+    };
+  }
+}
+
+</script>
+</body>
+</html>
