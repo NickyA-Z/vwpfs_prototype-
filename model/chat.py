@@ -50,7 +50,10 @@ def print_cars(cars: list[dict]) -> None:
 		return
 
 	if any(car["is_alternatief"] for car in cars):
-		print("\nGeen exacte match binnen het maandbudget.")
+		budget_type = (
+			"maandbudget" if cars[0]["contractvorm"] == "lease" else "aankoopbudget"
+		)
+		print(f"\nGeen exacte match binnen het {budget_type}.")
 		print("Dichtstbijzijnde alternatieven:")
 	else:
 		print("\nBeste matches op dit moment:")
@@ -67,6 +70,8 @@ def print_cars(cars: list[dict]) -> None:
 			)
 			if car["is_alternatief"]:
 				line += f" — €{car['budget_overschrijding']:.2f} boven budget"
+		elif car["is_alternatief"]:
+			line += f" — €{car['budget_overschrijding']:.2f} boven budget"
 		print(line)
 		if car["contractvorm"] == "lease":
 			print_lease_matrix(car["lease_prijzen"])
@@ -132,6 +137,26 @@ def _ask_monthly_budget() -> float:
 		print("Vul een positief bedrag in, bijvoorbeeld 500.\n")
 
 
+def _ask_purchase_budget() -> float:
+	"""Ask for a positive maximum purchase budget."""
+	while True:
+		answer = input("Assistent: Wat is je maximale aankoopbudget in euro's?\nJij: ").strip()
+		if answer.casefold() in EXIT_COMMANDS:
+			raise SystemExit("Gesprek afgesloten.")
+		normalized = answer.replace("€", "").replace(" ", "")
+		if "," in normalized:
+			normalized = normalized.replace(".", "").replace(",", ".")
+		else:
+			normalized = normalized.replace(".", "")
+		try:
+			budget = float(normalized)
+		except ValueError:
+			budget = 0
+		if budget > 0:
+			return budget
+		print("Vul een positief bedrag in, bijvoorbeeld 30000.\n")
+
+
 def ask_lease_preferences() -> dict:
 	"""Collect the terms required for deterministic lease pricing."""
 	looptijd = _ask_option(
@@ -153,6 +178,7 @@ def main() -> None:
 	print("Welkom bij de autozoeker. Typ 'stop' om af te sluiten.\n")
 	contractvorm = ask_contractvorm()
 	leasevoorkeuren = ask_lease_preferences() if contractvorm == "lease" else {}
+	max_aankoopbedrag = _ask_purchase_budget() if contractvorm == "koop" else None
 	print("\nAssistent: Beschrijf nu je ideale auto.\n")
 
 	while True:
@@ -177,6 +203,7 @@ def main() -> None:
 				looptijd_maanden=leasevoorkeuren.get("looptijd_maanden", 48),
 				km_per_jaar=leasevoorkeuren.get("km_per_jaar", 15_000),
 				max_maandbedrag=leasevoorkeuren.get("max_maandbedrag"),
+				max_aankoopbedrag=max_aankoopbedrag,
 			)
 		except Exception as error:
 			print(f"\nDe zoekopdracht kon niet worden verwerkt: {error}")

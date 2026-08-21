@@ -14,6 +14,7 @@ def continue_car_search(
 	looptijd_maanden: int = 48,
 	km_per_jaar: int = 15_000,
 	max_maandbedrag: float | None = None,
+	max_aankoopbedrag: float | None = None,
 ) -> dict:
 	"""Process one conversation turn and return matches plus the next question."""
 	contractvorm = contractvorm or (state or {}).get("contractvorm")
@@ -24,6 +25,11 @@ def continue_car_search(
 		looptijd_maanden = leasevoorkeuren.get("looptijd_maanden", looptijd_maanden)
 		km_per_jaar = leasevoorkeuren.get("km_per_jaar", km_per_jaar)
 		max_maandbedrag = leasevoorkeuren.get("max_maandbedrag", max_maandbedrag)
+	else:
+		koopvoorkeuren = (state or {}).get("koopvoorkeuren", {})
+		max_aankoopbedrag = koopvoorkeuren.get(
+			"max_aankoopbedrag", max_aankoopbedrag
+		)
 
 	new_state = interpret_search_turn(user_message, state)
 	new_state["contractvorm"] = contractvorm
@@ -33,6 +39,10 @@ def continue_car_search(
 			"km_per_jaar": km_per_jaar,
 			"max_maandbedrag": max_maandbedrag,
 		}
+	else:
+		new_state["koopvoorkeuren"] = {
+			"max_aankoopbedrag": max_aankoopbedrag,
+		}
 	cars = filter_and_rank_cars(
 		new_state["filters"],
 		limit=limit,
@@ -40,6 +50,7 @@ def continue_car_search(
 		looptijd_maanden=looptijd_maanden,
 		km_per_jaar=km_per_jaar,
 		max_maandbedrag=max_maandbedrag,
+		max_aankoopbedrag=max_aankoopbedrag,
 	)
 	return {
 		"state": new_state,
@@ -59,6 +70,7 @@ def search_cars(
 	looptijd_maanden: int = 48,
 	km_per_jaar: int = 15_000,
 	max_maandbedrag: float | None = None,
+	max_aankoopbedrag: float | None = None,
 ) -> dict:
 	"""Start a natural-language car-search conversation."""
 	return continue_car_search(
@@ -68,4 +80,5 @@ def search_cars(
 		looptijd_maanden=looptijd_maanden,
 		km_per_jaar=km_per_jaar,
 		max_maandbedrag=max_maandbedrag,
+		max_aankoopbedrag=max_aankoopbedrag,
 	)

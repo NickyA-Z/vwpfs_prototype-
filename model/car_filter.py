@@ -103,6 +103,7 @@ def filter_and_rank_cars(
 	looptijd_maanden: int = DEFAULT_LOOPTIJD_MAANDEN,
 	km_per_jaar: int = DEFAULT_KM_PER_JAAR,
 	max_maandbedrag: float | None = None,
+	max_aankoopbedrag: float | None = None,
 ) -> list[dict]:
 	"""Filter cars and rank equal matches by their calculated contract margin."""
 	if contractvorm not in {"lease", "koop"}:
@@ -190,6 +191,27 @@ def filter_and_rank_cars(
 			)
 		)
 	else:
+		if max_aankoopbedrag is not None:
+			binnen_budget = [
+				car for car in matching_cars
+				if float(car["aanschafprijs"]) <= max_aankoopbedrag
+			]
+			if binnen_budget:
+				matching_cars = binnen_budget
+			else:
+				for car in matching_cars:
+					car["is_alternatief"] = True
+					car["budget_overschrijding"] = round(
+						float(car["aanschafprijs"]) - max_aankoopbedrag, 2
+					)
+				matching_cars.sort(
+					key=lambda car: (
+						car["budget_overschrijding"],
+						-car["match_score"],
+					)
+				)
+				return matching_cars[:limit]
+
 		matching_cars.sort(
 			key=lambda car: (
 				-car["match_score"],
