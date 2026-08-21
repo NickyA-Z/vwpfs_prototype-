@@ -102,25 +102,32 @@ export default function CarViewer({ spec }: { spec: RenderSpec }) {
 
     if (stage.carModel === spec.model && stage.car) {
       applyPaint(stage.car, spec)
+      stage.renderer.render(stage.scene, stage.camera)
       return
     }
 
     let cancelled = false
-    stage.loader.load(spec.model_url, (gltf) => {
-      if (cancelled || !stageRef.current) return
-      if (stage.car) stage.scene.remove(stage.car)
-      stage.car = gltf.scene
-      stage.carModel = spec.model
-      applyPaint(gltf.scene, spec)
+    stage.loader.load(
+      spec.model_url,
+      (gltf) => {
+        if (cancelled || !stageRef.current) return
+        if (stage.car) stage.scene.remove(stage.car)
+        stage.car = gltf.scene
+        stage.carModel = spec.model
+        applyPaint(gltf.scene, spec)
 
-      // centre the car on the turntable, wheels on the ground
-      const box = new THREE.Box3().setFromObject(gltf.scene)
-      const centre = box.getCenter(new THREE.Vector3())
-      gltf.scene.position.sub(centre)
-      gltf.scene.position.y = -box.min.y
-      stage.controls.target.set(0, (box.max.y - box.min.y) / 2, 0)
-      stage.scene.add(gltf.scene)
-    })
+        // centre the car on the turntable, wheels on the ground
+        const box = new THREE.Box3().setFromObject(gltf.scene)
+        const centre = box.getCenter(new THREE.Vector3())
+        gltf.scene.position.sub(centre)
+        gltf.scene.position.y = -box.min.y
+        stage.controls.target.set(0, (box.max.y - box.min.y) / 2, 0)
+        stage.scene.add(gltf.scene)
+        stage.renderer.render(stage.scene, stage.camera)
+      },
+      undefined,
+      (error) => console.error('CarViewer: failed to load model', error),
+    )
     return () => {
       cancelled = true
     }

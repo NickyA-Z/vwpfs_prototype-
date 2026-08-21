@@ -10,6 +10,8 @@ import Mascotte from '../../components/Mascotte'
 
 type Phase = 'intro' | 'questions' | 'done'
 type Answers = Record<string, string>
+// fixed lease terms used by the deterministic pricing (advanced/lease_pricing.py)
+const LEASE_TERMS = { months: 48, kmPerYear: '15.000 km' }
 
 function dedupeFilters(filters: SearchFilter[]): SearchFilter[] {
   const seen = new Set<string>()
@@ -152,7 +154,7 @@ export default function FindMyCar() {
 
   async function classifyBrief(message: string) {
     try {
-      const result = await chatTurn(message, chatState, contractvorm)
+      const result = await chatTurn(message, chatState, contractvorm, leaseBudget ?? undefined)
       setChatState(result.state)
       setAiFilters(result.state.filters)
       setAiOffline(false)
@@ -299,6 +301,14 @@ export default function FindMyCar() {
                   <button type="button" className="fmc-filter-remove" aria-label="Remove monthly budget" onClick={clearLeaseBudget}>
                     ×
                   </button>
+                </div>
+              )}
+              {contractvorm === 'lease' && (
+                <div className="fmc-filter-card preferred">
+                  <span className="fmc-rail-text">
+                    <span className="fmc-rail-title">Lease terms</span>
+                    <span className="fmc-rail-value filled">{`${LEASE_TERMS.months} months · ${LEASE_TERMS.kmPerYear}/yr`}</span>
+                  </span>
                 </div>
               )}
               {filters.map((f) => {

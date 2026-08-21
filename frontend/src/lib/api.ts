@@ -85,6 +85,7 @@ export async function chatTurn(
   message: string,
   state: ChatState | null,
   contractvorm: Contractvorm = 'koop',
+  maxMaandbedrag?: number,
 ): Promise<{
   state: ChatState
   filters: SearchFilter[]
@@ -95,7 +96,7 @@ export async function chatTurn(
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, state, contractvorm }),
+    body: JSON.stringify({ message, state, contractvorm, max_maandbedrag: maxMaandbedrag }),
   })
   if (!res.ok) throw new Error(`chat failed: ${res.status}`)
   return res.json()

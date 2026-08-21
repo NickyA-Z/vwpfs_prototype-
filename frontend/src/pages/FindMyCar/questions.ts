@@ -70,9 +70,10 @@ export const QUESTIONS: Question[] = [
     title: "What's your budget?",
     body: 'I’ll stay under this — or get as close as I can.',
     control: 'slider',
+    // lease minimum sits just above the cheapest monthly price in stock (€173)
     slider: (answers) =>
       answers.contract === 'Lease'
-        ? { min: 150, max: 1500, step: 25, start: 500 }
+        ? { min: 175, max: 1500, step: 25, start: 500 }
         : { min: 5000, max: 120000, step: 1000, start: 35000 },
     skippable: true,
   },

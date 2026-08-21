@@ -61,3 +61,20 @@ def test_turn_can_replace_and_remove_filters(monkeypatch):
 		"field": "transmissie",
 		"question": "Wil je een automaat of een handgeschakelde auto?",
 	}
+
+
+def test_lease_turn_never_asks_for_purchase_price(monkeypatch):
+	response = {
+		"set_filters": [
+			{"field": "aanschafprijs", "operator": "max", "value": 30_000, "importance": "required"}
+		],
+		"remove_filters": [],
+		"no_preference_fields": [],
+		"follow_up_field": "aanschafprijs",
+	}
+	monkeypatch.setattr(prompts, "call_gemini", lambda *args, **kwargs: json.dumps(response))
+
+	result = prompts.interpret_search_turn("Maximaal 500 per maand", contractvorm="lease")
+
+	assert all(item["field"] != "aanschafprijs" for item in result["filters"])
+	assert result["follow_up"]["field"] != "aanschafprijs"

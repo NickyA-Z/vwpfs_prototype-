@@ -31,7 +31,11 @@ def continue_car_search(
 			"max_aankoopbedrag", max_aankoopbedrag
 		)
 
-	new_state = interpret_search_turn(user_message, state)
+	new_state = interpret_search_turn(
+		user_message,
+		state,
+		contractvorm=contractvorm,
+	)
 	new_state["contractvorm"] = contractvorm
 	if contractvorm == "lease":
 		new_state["leasevoorkeuren"] = {
