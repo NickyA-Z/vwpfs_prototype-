@@ -18,22 +18,25 @@ MODEL_DIR = 'car_3d/models'
 
 # ---------------------------------------------------------------- paint
 # dataset colour name -> (hex, finish, english name)
+# The tones are softened a step from showroom-realistic so the cars sit in
+# the pastel UI rather than against it; each still reads as its Dutch name.
 COLOURS = {
-    'Zwart':            ('#16181c', 'solid',    'Black'),
-    'Wit':              ('#e9ecef', 'solid',    'White'),
-    'Zilver metallic':  ('#b9c0c7', 'metallic', 'Silver'),
-    'Grijs metallic':   ('#6b7178', 'metallic', 'Grey'),
-    'Blauw metallic':   ('#1d4e93', 'metallic', 'Blue'),
-    'Rood metallic':    ('#9c1622', 'metallic', 'Red'),
-    'Groen metallic':   ('#1f5a3c', 'metallic', 'Green'),
-    'Bruin metallic':   ('#5b3b25', 'metallic', 'Brown'),
+    'Zwart':            ('#2b2e34', 'solid',    'Black'),
+    'Wit':              ('#eef0f3', 'solid',    'White'),
+    'Zilver metallic':  ('#c3c9d0', 'metallic', 'Silver'),
+    'Grijs metallic':   ('#878d95', 'metallic', 'Grey'),
+    'Blauw metallic':   ('#3d68b2', 'metallic', 'Blue'),
+    'Rood metallic':    ('#bb3d4c', 'metallic', 'Red'),
+    'Groen metallic':   ('#3d7d5b', 'metallic', 'Green'),
+    'Bruin metallic':   ('#7d5b40', 'metallic', 'Brown'),
 }
 UNKNOWN_COLOUR = ('#9aa0a6', 'solid', 'Unknown')
 
-# metallic paint is smoother and more reflective than solid paint
+# metallic paint keeps a hint more sheen than solid, but both sit closer to
+# a toy/matte look than to real car lacquer
 FINISH = {
-    'metallic': {'metalness': 0.85, 'roughness': 0.22},
-    'solid':    {'metalness': 0.25, 'roughness': 0.38},
+    'metallic': {'metalness': 0.4, 'roughness': 0.5},
+    'solid':    {'metalness': 0.05, 'roughness': 0.62},
 }
 
 # --------------------------------------------------------------- models

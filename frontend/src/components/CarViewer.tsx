@@ -35,17 +35,19 @@ export default function CarViewer({ spec }: { spec: RenderSpec }) {
       new RoomEnvironment(),
       0.04,
     ).texture
+    // soft, flat, toy-like light rather than a reflective showroom
+    scene.environmentIntensity = 0.5
 
     const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100)
     camera.position.set(4.6, 1.9, 5.4)
 
-    const key = new THREE.DirectionalLight(0xffffff, 1.4)
+    const key = new THREE.DirectionalLight(0xfff4e0, 0.9)
     key.position.set(4, 6, 3)
-    scene.add(key, new THREE.AmbientLight(0xffffff, 0.35))
+    scene.add(key, new THREE.AmbientLight(0xffffff, 1.1))
 
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(4.2, 48),
-      new THREE.MeshStandardMaterial({ color: 0x22262d, roughness: 0.9 }),
+      new THREE.MeshStandardMaterial({ color: 0xccd1da, roughness: 1 }),
     )
     ground.rotation.x = -Math.PI / 2
     scene.add(ground)

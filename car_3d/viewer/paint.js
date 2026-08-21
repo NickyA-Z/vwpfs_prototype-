@@ -38,8 +38,8 @@ function hookMaterial(material) {
 
   const uniforms = {
     uPaintColor: { value: new THREE.Color(0xffffff) },
-    uPaintMetal: { value: 0.85 },
-    uPaintRough: { value: 0.22 },
+    uPaintMetal: { value: 0.4 },
+    uPaintRough: { value: 0.5 },
   };
   material.userData.paintUniforms = uniforms;
 
@@ -81,15 +81,15 @@ export function applyPaint(root, spec) {
     if (isPaintable(material)) {
       const uniforms = hookMaterial(material);
       uniforms.uPaintColor.value.copy(colour);
-      uniforms.uPaintMetal.value = spec.metalness ?? 0.85;
-      uniforms.uPaintRough.value = spec.roughness ?? 0.22;
+      uniforms.uPaintMetal.value = spec.metalness ?? 0.4;
+      uniforms.uPaintRough.value = spec.roughness ?? 0.5;
       painted += 1;
     } else if (material.name === 'Glass') {
       material.transparent = true;
-      material.opacity = 0.42;
-      material.roughness = 0.05;
+      material.opacity = 0.5;
+      material.roughness = 0.18;
       material.metalness = 0.0;
-      material.envMapIntensity = 2.2;
+      material.envMapIntensity = 1.0;
     }
   });
   return painted;
