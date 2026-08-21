@@ -52,9 +52,23 @@ def continue_car_search(
 		max_maandbedrag=max_maandbedrag,
 		max_aankoopbedrag=max_aankoopbedrag,
 	)
+	effective_filters = list(new_state["filters"])
+	if contractvorm == "koop" and max_aankoopbedrag is not None:
+		effective_filters = [
+			item for item in effective_filters if item["field"] != "aanschafprijs"
+		]
+		effective_filters.append(
+			{
+				"field": "aanschafprijs",
+				"operator": "max",
+				"value": max_aankoopbedrag,
+				"importance": "required",
+				"source": "aankoopbudget",
+			}
+		)
 	return {
 		"state": new_state,
-		"filters": new_state["filters"],
+		"filters": effective_filters,
 		"cars": cars,
 		"alternatieven": any(car["is_alternatief"] for car in cars),
 		"follow_up": new_state["follow_up"],

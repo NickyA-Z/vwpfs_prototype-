@@ -7,13 +7,58 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from model.car_filter import ALLOWED_OPERATORS, SEARCHABLE_FIELDS
+from model.car_filter import (
+	ALLOWED_FIELD_VALUES,
+	OPERATORS_BY_TYPE,
+	SEARCHABLE_FIELDS,
+	normalize_filter_value,
+)
 
 
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL")
+
+FIELD_QUESTIONS = {
+	"type": "Wil je een nieuwe of tweedehands auto?",
+	"merk": "Heb je een voorkeur voor een automerk?",
+	"model": "Heb je een voorkeur voor een specifiek model?",
+	"uitvoering": "Heb je een voorkeur voor een bepaalde uitvoering?",
+	"kleur": "Welke kleur heeft je voorkeur?",
+	"bouwjaar": "Vanaf welk bouwjaar wil je zoeken?",
+	"carrosserie": "Welke carrosserievorm heeft je voorkeur?",
+	"brandstof": "Welke brandstofsoort heeft je voorkeur?",
+	"transmissie": "Wil je een automaat of een handgeschakelde auto?",
+	"zitplaatsen": "Hoeveel zitplaatsen heb je minimaal nodig?",
+	"deuren": "Hoeveel deuren wil je minimaal?",
+	"vermogen_pk": "Hoeveel vermogen wil je minimaal, uitgedrukt in pk?",
+	"verbruik_l_100km": "Wat is je maximale gewenste brandstofverbruik per 100 km?",
+	"actieradius_km": "Welke minimale actieradius wil je?",
+	"co2_uitstoot_g_km": "Wat is de maximale CO₂-uitstoot die je accepteert?",
+	"bagageruimte_liter": "Hoeveel bagageruimte heb je minimaal nodig?",
+	"kilometerstand": "Wat is de maximale kilometerstand die je accepteert?",
+	"aantal_vorige_eigenaren": "Hoeveel vorige eigenaren accepteer je maximaal?",
+	"conditie": "Welke conditie moet de auto minimaal hebben?",
+	"aanschafprijs": "Wat is de maximale aanschafprijs die je overweegt?",
+	"airconditioning": "Wil je airconditioning?",
+	"cruise_control": "Wil je cruise control?",
+	"apple_carplay_android_auto": "Wil je Apple CarPlay of Android Auto?",
+	"navigatiesysteem": "Wil je een ingebouwd navigatiesysteem?",
+	"parkeersensoren_achter": "Wil je parkeersensoren achter?",
+	"achteruitrijcamera": "Wil je een achteruitrijcamera?",
+	"stoelverwarming": "Wil je stoelverwarming?",
+	"led_koplampen": "Wil je LED-koplampen?",
+	"keyless_entry": "Wil je keyless entry?",
+	"lane_assist": "Wil je lane assist?",
+	"parkeersensoren_voor": "Wil je parkeersensoren voor?",
+	"adaptive_cruise_control": "Wil je adaptive cruise control?",
+	"trekhaak": "Heb je een trekhaak nodig?",
+	"elektrische_achterklep": "Wil je een elektrische achterklep?",
+	"panoramadak": "Wil je een panoramadak?",
+	"camera_360_graden": "Wil je een 360-gradencamera?",
+	"aantal_opties": "Hoeveel uitrustingsopties wil je minimaal?",
+}
 
 
 def call_gemini(prompt: str, *, json_response: bool = False) -> str:
@@ -48,17 +93,22 @@ def _validate_filters(filters: object) -> list[dict]:
 		field = item.get("field")
 		operator = item.get("operator")
 		importance = item.get("importance")
+		normalized_value = (
+			normalize_filter_value(field, item.get("value"))
+			if field in SEARCHABLE_FIELDS and "value" in item
+			else None
+		)
 		if (
 			field in SEARCHABLE_FIELDS
-			and operator in ALLOWED_OPERATORS
+			and operator in OPERATORS_BY_TYPE[SEARCHABLE_FIELDS[field]]
 			and importance in {"required", "preferred"}
-			and "value" in item
+			and normalized_value is not None
 		):
 			validated.append(
 				{
 					"field": field,
 					"operator": operator,
-					"value": item["value"],
+					"value": normalized_value,
 					"importance": importance,
 				}
 			)
@@ -77,6 +127,7 @@ def interpret_search_turn(user_message: str, state: dict | None = None) -> dict:
 	field_description = ", ".join(
 		f"{name} ({field_type})" for name, field_type in SEARCHABLE_FIELDS.items()
 	)
+	allowed_value_description = json.dumps(ALLOWED_FIELD_VALUES, ensure_ascii=False)
 
 	prompt = f"""
 Je begeleidt een Nederlandstalige autokoper. Verwerk het nieuwste antwoord en
@@ -86,18 +137,22 @@ hernoem ze nooit.
 
 Geef uitsluitend dit JSON-object terug:
 {{
-  "filters": [nieuwe of gewijzigde filters uit het nieuwste bericht],
-  "answered_fields": [labels die door het nieuwste bericht zijn beantwoord],
-  "follow_up": {{"field": "exact_label", "question": "Nederlandse vraag"}} of null
+  "set_filters": [nieuwe of gewijzigde filters uit het nieuwste bericht],
+  "remove_filters": [exacte labels waarvan de bestaande voorkeur vervalt],
+  "no_preference_fields": [labels waarvoor de gebruiker zegt dat het niet uitmaakt],
+  "follow_up_field": "exact_label" of null
 }}
 
 Elk filter bevat field, operator, value en importance. De operator is eq,
 contains, min of max. Importance is required voor een expliciete grens of harde
 eis en preferred voor een voorkeur. Geef alleen nieuwe of gewijzigde filters
-terug en voeg geen voorkeuren toe die de koper niet noemt.
+terug in set_filters. Als de koper een bestaande eis intrekt, zet het exacte
+label in remove_filters. Als de koper een voorkeur wijzigt, zet de vervangende
+waarde in set_filters; deze vervangt de bestaande waarde voor dat label.
 
-Als de gebruiker zegt dat een kenmerk niet uitmaakt, voeg het label dan wel toe
-aan answered_fields, maar maak er geen filter voor. Kies voor follow_up één label
+Als de gebruiker zegt dat een kenmerk niet uitmaakt, voeg het label dan toe aan
+no_preference_fields en remove_filters, maar maak er geen filter voor. Kies voor
+follow_up_field één label
 dat nog niet in de lijst met beantwoorde labels staat. Als alle labels beantwoord
 zijn, gebruik null.
 
@@ -110,8 +165,12 @@ Voorbeelden van Nederlandse tekst naar exacte labels:
 
 Gebruik tekstwaarden zoals ze in het Nederlandse CSV-bestand staan. Verzin geen
 numerieke grens voor subjectieve woorden zoals "zuinig" of "ruim".
+Zet synoniemen, informele woorden en afwijkende spelling om naar exact één van de
+toegestane waarden. Retourneer nooit een andere tekstwaarde. Voor numerieke
+velden mag je wel iedere concrete grenswaarde gebruiken.
 
 Beschikbare veldlabels: {field_description}
+Toegestane waarden per categorisch veld: {allowed_value_description}
 Al beantwoorde veldlabels: {json.dumps(sorted(answered_fields), ensure_ascii=False)}
 Bestaande filters: {json.dumps(known_filters, ensure_ascii=False)}
 Vorige vervolgvraag: {json.dumps(previous_question, ensure_ascii=False)}
@@ -124,32 +183,36 @@ Nieuwste bericht: {json.dumps(user_message, ensure_ascii=False)}
 	except json.JSONDecodeError as error:
 		raise ValueError("Gemini returned invalid search-state JSON") from error
 
-	filter_updates = _validate_filters(result.get("filters", []))
+	filter_updates = _validate_filters(result.get("set_filters", []))
+	remove_filters = result.get("remove_filters", [])
+	if not isinstance(remove_filters, list):
+		remove_filters = []
+	remove_fields = {
+		field for field in remove_filters if field in SEARCHABLE_FIELDS
+	}
 	filters_by_field = {item["field"]: item for item in known_filters}
+	for field in remove_fields:
+		filters_by_field.pop(field, None)
 	filters_by_field.update({item["field"]: item for item in filter_updates})
 	merged_filters = list(filters_by_field.values())
+	answered_fields.difference_update(remove_fields)
 
-	newly_answered = result.get("answered_fields", [])
-	if isinstance(newly_answered, list):
+	no_preference_fields = result.get("no_preference_fields", [])
+	if isinstance(no_preference_fields, list):
 		answered_fields.update(
-			field for field in newly_answered if field in SEARCHABLE_FIELDS
+			field for field in no_preference_fields if field in SEARCHABLE_FIELDS
 		)
 	answered_fields.update(item["field"] for item in filter_updates)
 
 	missing_fields = [field for field in SEARCHABLE_FIELDS if field not in answered_fields]
-	follow_up = result.get("follow_up")
+	follow_up_field = result.get("follow_up_field")
 	if not missing_fields:
 		follow_up = None
-	elif not (
-		isinstance(follow_up, dict)
-		and follow_up.get("field") in missing_fields
-		and isinstance(follow_up.get("question"), str)
-		and follow_up["question"].strip()
-	):
-		field = missing_fields[0]
+	else:
+		field = follow_up_field if follow_up_field in missing_fields else missing_fields[0]
 		follow_up = {
 			"field": field,
-			"question": f"Wat is je voorkeur voor {field}?",
+			"question": FIELD_QUESTIONS[field],
 		}
 
 	return {
