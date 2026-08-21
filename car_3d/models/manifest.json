@@ -1,0 +1,37 @@
+{
+  "compact": {
+    "file": "models/compact.glb",
+    "length_m": 3.9,
+    "bytes": 1416344
+  },
+  "hatchback": {
+    "file": "models/hatchback.glb",
+    "length_m": 4.1,
+    "bytes": 1355724
+  },
+  "sedan": {
+    "file": "models/sedan.glb",
+    "length_m": 4.8,
+    "bytes": 1298712
+  },
+  "coupe": {
+    "file": "models/coupe.glb",
+    "length_m": 4.5,
+    "bytes": 1279676
+  },
+  "wagon": {
+    "file": "models/wagon.glb",
+    "length_m": 4.8,
+    "bytes": 1328676
+  },
+  "suv": {
+    "file": "models/suv.glb",
+    "length_m": 4.6,
+    "bytes": 1180848
+  },
+  "minivan": {
+    "file": "models/minivan.glb",
+    "length_m": 4.9,
+    "bytes": 1225396
+  }
+}
