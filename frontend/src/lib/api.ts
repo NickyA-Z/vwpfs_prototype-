@@ -54,15 +54,18 @@ export type ChatState = {
   follow_up: { field: string; question: string } | null
 }
 
+export type Contractvorm = 'koop' | 'lease'
+
 export async function rankCars(
   filters: SearchFilter[],
   excludeIds: string[],
   limit = 4,
+  contractvorm: Contractvorm = 'koop',
 ): Promise<Car[]> {
   const res = await fetch('/api/rank', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filters, exclude_ids: excludeIds, contractvorm: 'koop', limit }),
+    body: JSON.stringify({ filters, exclude_ids: excludeIds, contractvorm, limit }),
   })
   if (!res.ok) throw new Error(`rank failed: ${res.status}`)
   const data = await res.json()
@@ -71,7 +74,11 @@ export async function rankCars(
 
 // One conversational turn through the backend AI (Gemini). Throws when the
 // server has no key configured; callers treat that as "AI not available".
-export async function chatTurn(message: string, state: ChatState | null): Promise<{
+export async function chatTurn(
+  message: string,
+  state: ChatState | null,
+  contractvorm: Contractvorm = 'koop',
+): Promise<{
   state: ChatState
   filters: SearchFilter[]
   cars: Car[]
@@ -81,7 +88,7 @@ export async function chatTurn(message: string, state: ChatState | null): Promis
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, state, contractvorm: 'koop' }),
+    body: JSON.stringify({ message, state, contractvorm }),
   })
   if (!res.ok) throw new Error(`chat failed: ${res.status}`)
   return res.json()

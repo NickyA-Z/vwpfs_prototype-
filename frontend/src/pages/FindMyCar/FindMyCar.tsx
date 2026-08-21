@@ -3,7 +3,7 @@ import './FindMyCar.css'
 import { QUESTIONS, EXAMPLES } from './questions'
 import {
   answersToFilters, chatTurn, describeFilter, filterKey, rankCars,
-  type Car, type ChatState, type SearchFilter,
+  type Car, type ChatState, type Contractvorm, type SearchFilter,
 } from '../../lib/api'
 import CarViewer from '../../components/CarViewer'
 
@@ -89,6 +89,7 @@ function euro(value: string | number | null | undefined): string {
 
 export default function FindMyCar() {
   const [phase, setPhase] = useState<Phase>('intro')
+  const [contractvorm, setContractvorm] = useState<Contractvorm | null>(null)
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [draft, setDraft] = useState('')
@@ -125,7 +126,7 @@ export default function FindMyCar() {
     if (!isDone) return
     const seq = ++rankSeq.current
     setSearching(true)
-    rankCars(filters, rejected, 4)
+    rankCars(filters, rejected, 4, contractvorm ?? 'koop')
       .then((found) => {
         if (rankSeq.current !== seq) return
         setCars(found)
@@ -138,13 +139,13 @@ export default function FindMyCar() {
       .finally(() => {
         if (rankSeq.current === seq) setSearching(false)
       })
-  }, [isDone, filters, rejected])
+  }, [isDone, filters, rejected, contractvorm])
 
   async function sendToAi(message: string): Promise<boolean> {
     if (!message.trim() || chatBusy) return false
     setChatBusy(true)
     try {
-      const result = await chatTurn(message.trim(), chatState)
+      const result = await chatTurn(message.trim(), chatState, contractvorm ?? 'koop')
       setChatState(result.state)
       setAiFilters(result.state.filters)
       setAiQuestion(result.follow_up?.question ?? null)
@@ -174,7 +175,7 @@ export default function FindMyCar() {
 
   async function start(text: string) {
     const trimmed = text.trim()
-    if (!trimmed) return
+    if (!trimmed || !contractvorm) return
     setBrief(trimmed)
     setDraft(trimmed)
     setStep(0)
@@ -200,6 +201,7 @@ export default function FindMyCar() {
 
   function reset() {
     setPhase('intro')
+    setContractvorm(null)
     setStep(0)
     setAnswers({})
     setDraft('')
@@ -245,22 +247,28 @@ export default function FindMyCar() {
 
   const bubbleKicker = isIntro ? 'Your car advisor' : isDone ? 'Your match' : question.kicker
   const bubbleTitle = isIntro
-    ? 'Hey there!'
+    ? contractvorm
+      ? contractvorm === 'koop' ? 'Welke auto wil je kopen?' : 'Welke auto wil je leasen?'
+      : 'Wil je kopen of leasen?'
     : isDone
       ? searching && !current
         ? 'Searching…'
         : current
           ? `${current.merk} ${current.model} ${current.uitvoering}`
-          : 'No car fits everything'
+          : 'Geen auto meer beschikbaar'
       : question.title
   const bubbleBody = isIntro
-    ? "Tell me what kind of car you're looking for. I'll interpret it and ask one short follow-up at a time."
+    ? contractvorm
+      ? "Beschrijf wat voor auto je zoekt. Ik interpreteer je wensen en stel steeds één korte vervolgvraag."
+      : 'Deze keuze bepaalt of ik op aanschafprijs of maandelijkse leaseprijs zoek.'
     : isDone
       ? aiQuestion
         ? aiQuestion
         : current
           ? `This ${current.kleur.toLowerCase()} ${current.carrosserie.toLowerCase()} matches ${current.matched_preferences.length} of your preferences${current.is_alternatief ? ` — it's €${current.budget_overschrijding.toLocaleString('nl-NL')} over budget, the closest I could get` : ''}. Not the one? Reject it and I'll find another.`
-          : 'Every card on the left is a hard requirement right now — remove one and I’ll look again.'
+          : filters.length
+            ? 'Er voldoet geen auto meer aan al je criteria. Verwijder één of meer filters aan de linkerkant; daarna zoek ik automatisch opnieuw.'
+            : 'Er zijn geen auto’s meer beschikbaar. Reset de zoekopdracht om opnieuw te beginnen.'
       : question.body
 
   const progressLabel = `Question ${step + 1} of ${QUESTIONS.length}`
@@ -268,7 +276,7 @@ export default function FindMyCar() {
 
   const specs = current
     ? [
-        ['Price', euro(current.aanschafprijs)],
+        [contractvorm === 'lease' ? 'Lease price' : 'Price', contractvorm === 'lease' && current.lease_klantprijs !== null ? `${euro(current.lease_klantprijs)} / month` : euro(current.aanschafprijs)],
         ['Fuel', current.brandstof],
         ['Gearbox', current.transmissie],
         ['Power', `${current.vermogen_pk} hp`],
@@ -383,6 +391,17 @@ export default function FindMyCar() {
               <span className="fmc-bubble-body">{bubbleBody}</span>
             </div>
 
+            {isIntro && !contractvorm && (
+              <div className="fmc-options">
+                <button type="button" className="fmc-option-btn" onClick={() => setContractvorm('koop')}>
+                  Kopen
+                </button>
+                <button type="button" className="fmc-option-btn" onClick={() => setContractvorm('lease')}>
+                  Leasen
+                </button>
+              </div>
+            )}
+
             {isFlow && (
               <div className="fmc-options">
                 {question.options.map((label) => (
@@ -396,6 +415,19 @@ export default function FindMyCar() {
             {isDone && searchError && (
               <div className="fmc-matches">
                 <span className="fmc-filter-empty">Couldn’t reach the search server — is `uvicorn server.app:app` running?</span>
+              </div>
+            )}
+
+            {isDone && !searching && !searchError && !current && (
+              <div className="fmc-matches">
+                <div className="fmc-match-card">
+                  <span className="fmc-match-name">Geen passende auto gevonden</span>
+                  <span className="fmc-match-spec">
+                    {filters.length
+                      ? 'Verwijder één of meer filters links om meer auto’s toe te laten.'
+                      : 'Reset de zoekopdracht om afgewezen auto’s opnieuw mee te nemen.'}
+                  </span>
+                </div>
               </div>
             )}
 
@@ -416,7 +448,11 @@ export default function FindMyCar() {
                   <div key={car.id} className="fmc-match-card">
                     <div className="fmc-match-row">
                       <span className="fmc-match-name">{`${car.merk} ${car.model} ${car.uitvoering}`}</span>
-                      <span className="fmc-match-price">{euro(car.aanschafprijs)}</span>
+                      <span className="fmc-match-price">
+                        {contractvorm === 'lease' && car.lease_klantprijs !== null
+                          ? `${euro(car.lease_klantprijs)} / month`
+                          : euro(car.aanschafprijs)}
+                      </span>
                     </div>
                     <span className="fmc-match-spec">
                       {[car.brandstof, car.transmissie, `${car.zitplaatsen} seats`, car.kleur].join('  ·  ')}
@@ -430,7 +466,7 @@ export default function FindMyCar() {
 
         <footer className="fmc-footer">
           <div className="fmc-footer-inner">
-            {isIntro && (
+            {isIntro && contractvorm && (
               <div className="fmc-intro-row">
                 <span className="fmc-intro-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
